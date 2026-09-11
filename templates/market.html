@@ -14,7 +14,7 @@
         </div>
         <form class="inline-form" method="get" action="/market" style="margin-bottom:10px">
           <input type="hidden" name="slot" value="{{ slot }}">
-          <input type="search" name="q" value="{{ term }}" placeholder="Search the catalogue" style="width:220px">
+          <input type="search" name="q" value="{{ term }}" placeholder="Search the catalogue" style="flex:1 1 180px;min-width:0">
           <select name="sort">
             <option value="featured" {{ 'selected' if sort == 'featured' else '' }}>Featured</option>
             <option value="price_asc" {{ 'selected' if sort == 'price_asc' else '' }}>Price: low to high</option>
@@ -31,7 +31,8 @@
             <div class="thumb-wrap">
               <canvas class="thumb item-thumb" width="216" height="216" data-item="{{ it.id }}"></canvas>
               <span class="tier-flag">Normal</span>
-              {% if owned.get(it.id) %}<span class="owned-flag">Owned x{{ owned.get(it.id) }}</span>{% endif %}
+              <span class="owned-flag {{ '' if owned.get(it.id) else 'hidden' }}"
+                    data-owned="{{ it.id }}" data-count="{{ owned.get(it.id) or 0 }}">Owned x{{ owned.get(it.id) or 0 }}</span>
             </div>
             <div class="meta">
               <span class="iname" title="{{ it.name }}">{{ it.name }}</span>
@@ -40,7 +41,8 @@
                 <span class="price">{% if it.free %}Free{% else %}<span class="coin"></span> {{ fmt_num(it.price) }}{% endif %}</span>
                 {% if user %}
                 <button class="btn small primary" data-buy="{{ it.id }}" data-price="{{ it.price }}"
-                        data-name="{{ it.name }}" data-slot="{{ it.slot }}">Buy</button>
+                        data-name="{{ it.name }}" data-slot="{{ it.slot }}"
+                        data-unusual="{{ 1 if it.unusual_capable else 0 }}">Buy</button>
                 {% else %}
                 <a class="btn small" href="/login">Sign in</a>
                 {% endif %}
@@ -59,9 +61,10 @@
     <div class="panel">
       <div class="panel-head purple">Item tiers</div>
       <div class="panel-body">
-        <p><span class="tier-flag" style="position:static;display:inline-block">Normal</span>
-           The standard finish every item ships with.</p>
-        <p><span class="tier-flag unusual" style="position:static;display:inline-block">Unusual</span>
+        <p><span class="tier-flag static">Normal</span>
+           The standard finish every item ships with. The glow on the tile is the tier &mdash;
+           hover an item to read it.</p>
+        <p><span class="tier-flag unusual static">Unusual</span>
            A 0.5% roll on <b>hat purchases only</b>. Unusual hats carry a permanent particle effect
            that follows you into every world.</p>
         <hr>
@@ -73,10 +76,10 @@
     </div>
 
     <div class="panel">
-      <div class="panel-head">Recently unboxed</div>
+      <div class="panel-head">Recent Unusual finds</div>
       <div class="panel-body">
         {% for row in showcase %}
-        <div style="padding:4px 0;border-bottom:1px dotted #cfdbe5">
+        <div style="padding:4px 0;border-bottom:1px dotted var(--line-dot)">
           <a href="/profile/{{ row.username }}">{{ row.username }}</a><br>
           <span class="pill purple">{{ row.name }}</span>
           <div class="tiny muted">{{ row.effect_name }} &bull; {{ ago(row.acquired_at) }}</div>
@@ -84,19 +87,6 @@
         {% endfor %}
         {% if not showcase %}<p class="muted tiny">No Unusuals yet.</p>{% endif %}
       </div>
-    </div>
-  </div>
-</div>
-
-<div id="unbox-modal" class="hidden" style="position:fixed;inset:0;background:rgba(8,16,26,.72);z-index:900;display:flex;align-items:center;justify-content:center">
-  <div class="panel" style="width:380px;margin:0">
-    <div class="panel-head purple" id="unbox-title">Purchase complete</div>
-    <div class="panel-body center">
-      <canvas id="unbox-canvas" width="320" height="320" style="width:240px;height:240px"></canvas>
-      <h2 id="unbox-name" style="margin-top:8px"></h2>
-      <p id="unbox-sub" class="muted"></p>
-      <button class="btn primary" id="unbox-close">Nice</button>
-      <a class="btn" href="/inventory">Open inventory</a>
     </div>
   </div>
 </div>

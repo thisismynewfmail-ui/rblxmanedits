@@ -1,4 +1,21 @@
 {% include "partials/head.html" %}
+<div class="eventbar" data-countdown="{{ spotlight_left }}">
+  <span class="glow"></span>
+  <div class="inner">
+    <div class="tagline">
+      <span class="kicker">{{ spotlight.kicker }}</span>
+      <h2>{{ spotlight.title }}</h2>
+      <p>{{ spotlight.blurb }}</p>
+    </div>
+    <div class="countdown" aria-label="Time left in this spotlight">
+      <div class="unit"><b data-cd="d">0</b><span>days</span></div>
+      <div class="unit"><b data-cd="h">0</b><span>hrs</span></div>
+      <div class="unit"><b data-cd="m">0</b><span>min</span></div>
+      <div class="unit"><b data-cd="s">0</b><span>sec</span></div>
+    </div>
+    <a class="btn go" href="{{ spotlight.href }}">{{ spotlight.cta }}</a>
+  </div>
+</div>
 <div class="hero">
   <div class="cloud" style="width:160px;height:34px;top:22px;animation-duration:52s"></div>
   <div class="cloud" style="width:110px;height:26px;top:74px;animation-duration:38s;animation-delay:-12s"></div>
@@ -15,7 +32,8 @@
       </p>
     </div>
     <div class="col-narrow">
-      <div class="avatar-view" style="height:220px" data-avatar-demo="1"></div>
+      <div class="avatar-view" style="height:220px" data-avatar-demo="male"></div>
+      <div class="avatar-view" style="height:150px;margin-top:8px" data-avatar-demo="female"></div>
     </div>
   </div>
 </div>
@@ -38,7 +56,8 @@
           <div class="step"><span class="n">1</span><h3>Make an account</h3>
             <p class="muted">You start with 2,000 credits and the standard kit.</p></div>
           <div class="step"><span class="n">2</span><h3>Build your avatar</h3>
-            <p class="muted">Six colourable body parts, hats, faces, shirts, pants and a back slot.</p></div>
+            <p class="muted">Two body types, six colourable parts, hats, faces, shirts,
+              pants and a back slot &mdash; every cosmetic fits both builds.</p></div>
           <div class="step"><span class="n">3</span><h3>Set your hotbar</h3>
             <p class="muted">Five usable slots. Pistol, shotgun and stick to begin with.</p></div>
           <div class="step"><span class="n">4</span><h3>Load a world</h3>
@@ -67,14 +86,14 @@
       <div class="panel-head purple">Unusual sightings</div>
       <div class="panel-body">
         {% if showcase %}
-        <table class="grid">
+        <div class="tablewrap"><table class="grid">
           {% for row in showcase %}
           <tr><td><a href="/profile/{{ row.username }}">{{ row.username }}</a></td>
               <td><span class="pill purple">{{ row.name }}</span></td>
               <td class="tiny muted">{{ row.effect_name }}</td></tr>
           {% endfor %}
-        </table>
-        {% else %}<p class="muted">Nobody has unboxed one yet. 0.5% is 0.5%.</p>{% endif %}
+        </table></div>
+        {% else %}<p class="muted">Nobody has pulled one yet. 0.5% is 0.5%.</p>{% endif %}
       </div>
     </div>
 
@@ -93,4 +112,5 @@
     </div>
   </div>
 </div>
+{% set page_script = "/static/js/ui/home.js" %}
 {% include "partials/foot.html" %}

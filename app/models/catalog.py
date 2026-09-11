@@ -176,6 +176,12 @@ DEFAULT_COLORS: Dict[str, str] = {
 
 BODY_PARTS = ["head", "torso", "left_arm", "right_arm", "left_leg", "right_leg"]
 
+# Body types share one head, one head-top hat anchor and one hitbox, so every
+# cosmetic in the catalogue fits both without a per-type variant.
+BODY_TYPES = ["male", "female"]
+BODY_TYPE_LABELS = {"male": "Male", "female": "Female"}
+DEFAULT_BODY_TYPE = "male"
+
 SLOTS = ["face", "hat", "shirt", "pants", "back"]
 HOTBAR_SIZE = 5
 
@@ -270,13 +276,13 @@ HATS: List[Dict[str, Any]] = [
     ], "Fisherman chic. Never goes out of style.", "common", 11),
 
     _hat("hat_headphones", "Retro Headphones", 500, [
-        {"t": "cyl", "p": [0.85, -0.35, 0], "s": [0.72, 0.28, 0.72],
+        {"t": "cyl", "p": [0.78, -0.35, 0], "s": [0.72, 0.30, 0.72],
          "c": "#1b2a35", "r": [0, 0, 1.5708]},
-        {"t": "cyl", "p": [-0.85, -0.35, 0], "s": [0.72, 0.28, 0.72],
+        {"t": "cyl", "p": [-0.78, -0.35, 0], "s": [0.72, 0.30, 0.72],
          "c": "#1b2a35", "r": [0, 0, 1.5708]},
-        {"t": "box", "p": [0, 0.28, 0], "s": [1.75, 0.2, 0.24], "c": "#2f3640"},
-        {"t": "box", "p": [0.86, 0.05, 0], "s": [0.2, 0.5, 0.22], "c": "#2f3640"},
-        {"t": "box", "p": [-0.86, 0.05, 0], "s": [0.2, 0.5, 0.22], "c": "#2f3640"},
+        {"t": "box", "p": [0, 0.20, 0], "s": [1.62, 0.2, 0.24], "c": "#2f3640"},
+        {"t": "box", "p": [0.79, -0.02, 0], "s": [0.2, 0.5, 0.22], "c": "#2f3640"},
+        {"t": "box", "p": [-0.79, -0.02, 0], "s": [0.2, 0.5, 0.22], "c": "#2f3640"},
     ], "Playing an eleven hour loop of the lobby theme.", "uncommon", 12),
 
     _hat("hat_antlers", "Forest Antlers", 700, [
@@ -639,11 +645,14 @@ USABLES: List[Dict[str, Any]] = [
         {"t": "box", "p": [0, -0.32, -0.15], "s": [0.2, 0.55, 0.5], "c": "#2a3524"},
     ], "One shot. Then a long, thoughtful pause.", 6, "rare"),
 
+    # Damage is 25% below where a direct hit used to land.  That budget buys
+    # the rocket jump: the launcher hurts its owner and shoves them, so the
+    # trade is height for health rather than a free boost.
     _usable("use_rocket", "Blast Launcher", 2500, {
-        "kind": "projectile", "damage": 88, "splash": 9.0, "splash_damage": 62,
+        "kind": "projectile", "damage": 66, "splash": 9.5, "splash_damage": 47,
         "rpm": 55, "mag": 4, "reload": 3.2, "speed": 78, "range": 500,
         "auto": False, "sound": "rocket", "recoil": 5.0, "reserve": 24,
-        "self_damage": 0.45, "knockback": 34,
+        "self_damage": 0.42, "knockback": 34, "self_knockback": 1.65,
     }, [
         {"t": "cyl", "p": [0, 0.05, 0.75], "s": [0.42, 2.6, 0.42], "c": "#2f6b3a",
          "r": [1.5708, 0, 0]},
@@ -651,7 +660,7 @@ USABLES: List[Dict[str, Any]] = [
         {"t": "box", "p": [0, 0.34, 0.5], "s": [0.14, 0.2, 0.7], "c": "#1b2a35"},
         {"t": "cyl", "p": [0, 0.05, 2.0], "s": [0.5, 0.3, 0.5], "c": "#22262b",
          "r": [1.5708, 0, 0]},
-    ], "Rocket jumping is a feature, not a bug.", 7, "rare"),
+    ], "Hurts you too. Point it at the floor and go somewhere.", 7, "rare"),
 
     _usable("use_sword", "Blockblade", 1000, {
         "kind": "melee", "damage": 55, "headshot": 1.3, "rpm": 78,
@@ -688,6 +697,25 @@ USABLES: List[Dict[str, Any]] = [
 ]
 
 ALL_ITEMS: List[Dict[str, Any]] = HATS + FACES + SHIRTS + PANTS + BACK_ITEMS + USABLES
+
+
+def _normalise_parts(items: List[Dict[str, Any]]) -> None:
+    """Rename the authoring keys onto the short keys the renderer reads.
+
+    The part dicts above are written for humans (``mat``/``alpha``); the
+    instance buffer packs ``m``/``a``.  Doing the rename once here means a
+    metal crown is actually metal everywhere -- site thumbnails, the avatar
+    preview and the game -- instead of silently falling back to plastic.
+    """
+    renames = (("mat", "m"), ("alpha", "a"), ("studs", "st"))
+    for item in items:
+        for piece in (item.get("data") or {}).get("parts", []):
+            for source, target in renames:
+                if source in piece and target not in piece:
+                    piece[target] = piece.pop(source)
+
+
+_normalise_parts(ALL_ITEMS)
 
 DEFAULT_EQUIPPED = {
     "face": "face_smile",

@@ -29,7 +29,22 @@ def avatar_editor(req: Request):
         hotbar_size=catalog.HOTBAR_SIZE,
         welcome=req.query.get("welcome") == "1",
         tiers=catalog.TIERS,
+        body_types=catalog.BODY_TYPES,
+        body_type_labels=catalog.BODY_TYPE_LABELS,
     )
+
+
+@router.post("/api/avatar/body")
+@login_required
+def set_body(req: Request):
+    try:
+        body_type = avatars.set_body_type(int(req.user["id"]),
+                                          str(req.data().get("body_type", "")))
+    except avatars.AvatarError as exc:
+        return api_error(str(exc))
+    return api_ok(body_type=body_type,
+                  avatar=avatars.descriptor(int(req.user["id"]),
+                                            req.user["username"]))
 
 
 @router.post("/api/avatar/colors")

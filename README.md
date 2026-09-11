@@ -4,9 +4,11 @@ A complete block-world game platform written in **pure Python 3 (standard
 library only)** and **vanilla JavaScript**. It has two halves:
 
 * **The UI** — the website: accounts, profiles with a live 3D character, an
-  avatar editor, an item market with Unusual rolls, an inventory bound to your
-  account, friends/followers/posts/comments/messages, a world browser and an
-  administrator dashboard.
+  avatar editor with two body types, an item market with Unusual rolls, an
+  inventory bound to your account, friends/followers/posts/comments/messages,
+  a world browser and an administrator dashboard. It has a hand-built dark
+  theme and a phone layout, because the site half is meant to work from a
+  pocket even though the game half is not.
 * **The Game View** — press **Load** on a world and you drop into a first- or
   third-person block shooter running in your browser, served from the same
   port on its own sub-page (`/burger_tycoon`, `/capture_the_flag`,
@@ -16,22 +18,31 @@ No frameworks, no build step, no `pip install`, no asset files. Every texture,
 sound, mesh and map is generated at runtime.
 
 ```
-python3 main.py
+./run.sh
 ```
 
-Then open **http://<your-ip>:8972/** on any machine on your network.
+Then open **http://<your-ip>:8972/** on any machine on your network. The site
+works on a phone; the Game View needs a desktop browser (pointer lock, a
+keyboard and a mouse), so its Load buttons are hidden on small screens.
 
 ---
 
 ## Quick start
 
 ```bash
-python3 main.py                 # website + all three game hosts on port 8972
-python3 main.py --port 9000     # somewhere else
-python3 main.py --no-games      # website only
-python3 main.py --reset         # wipe the database and re-seed
-python3 main.py --debug         # verbose tracebacks, no static caching
+./run.sh                        # website + all three game hosts on port 8972
+./run.sh --port 9000            # somewhere else
+./run.sh --no-games             # website only
+./run.sh --reset                # wipe the database and re-seed
+./run.sh --debug                # verbose tracebacks, no static caching
+./run.sh --status-interval 3    # refresh the terminal read-out faster (0 = off)
 ```
+
+`run.sh` is a thin wrapper around `python3 main.py`; every flag works either
+way. It leaves a live status block in the terminal — traffic, accounts, who is
+online, what each world is carrying and whether the host processes are healthy
+— which re-flows for the window it is printed into, so a narrow or vertical
+terminal gets the same numbers stacked instead of a table that wraps.
 
 Requirements: Python 3.9+ and a browser with WebGL. That is the whole list.
 
@@ -91,18 +102,24 @@ each round, and the match ends at three round wins.
 | `W A S D` | Move |
 | `Space` | Jump |
 | `Shift` | Walk slowly |
-| Mouse | Look / fire |
+| Mouse | Look; left button fires |
+| Right mouse | Scope, or use the held item; anything else falls through to `E` |
 | `1`–`5` | Hotbar slots |
 | `R` | Reload |
 | `E` | Interact (tycoon buttons, machines, plot claiming) |
-| `P` | Toggle first / third person |
+| `G` | Toggle first / third person |
 | `Y` | Chat &nbsp;&nbsp; `U` Team chat |
 | `Tab` | Scoreboard |
-| `Esc` | Pause menu → settings, key bindings, quit to profile |
+| `Esc` | Pause menu → settings, key bindings, quit |
 
 While the chat box is open every other binding is ignored so you can type
 freely. **Double-click a name** in chat or on the scoreboard to open that
 player's profile in a new tab.
+
+Loading a world takes the browser fullscreen and quitting hands it back exactly
+as it was found. Alt-Tab, the Windows key and a click on another monitor
+release the mouse without pausing the round — **only `Esc` pauses**. Quit
+returns you to whichever page you launched from.
 
 ---
 
@@ -117,6 +134,7 @@ app/
   db.py                    SQLite (WAL) with a thread-local connection pool
   bootstrap.py             idempotent first-run seeding + catalogue sync
   webapp.py                routing, sessions, CSRF, websocket backend resolver
+  console.py               the live terminal read-out (traffic, worlds, hosts)
   http/
     server.py              threaded HTTP/1.1 server + websocket reverse proxy
     router.py              Request/Response and the pattern router
@@ -125,6 +143,7 @@ app/
     catalog.py             THE item catalogue (hats, faces, clothing, weapons,
                            tiers and Unusual particle effects)
     users.py avatars.py inventory.py economy.py market.py worlds.py
+    events.py              the weekly home-page spotlight rotation
   social/
     friends.py follows.py posts.py comments.py messages.py feed.py
   views/                   one module per area of the site
@@ -142,7 +161,8 @@ static/
                            particles, synthesised audio
   js/game/                 client, netcode, physics, HUD, settings
   js/ui/                   site behaviour, 3D thumbnails, per-page scripts
-  css/                     site.css (Web 1.0 chrome) and game.css (HUD)
+  css/                     site.css (Web 1.0 chrome, light + dark palettes and
+                           the phone layout) and game.css (HUD)
 templates/                 server-rendered pages
 tools/                     dev server helper, bot client, test suites
 ```
@@ -206,6 +226,32 @@ plus `face`, `hat`, `shirt`, `pants` and `back` cosmetic slots and five
 **usable** hotbar slots. One rig drives the profile preview, the editor, the
 market thumbnails and the game itself, so anything added to the catalogue shows
 up everywhere at once.
+
+The rig is built from rounded boxes rather than hard cubes — a neck, a tapered
+torso, softened limbs and feet — so a bare default character has a silhouette
+instead of reading as a stack of blocks.
+
+**Two body types** ship, `male` and `female`. They differ only from the neck
+down: the female build has narrower shoulders, a cinched waist, flared hips and
+slimmer limbs. Head, neck, the hat anchor at the top of the head and the
+hitbox are identical for both, which is what guarantees every hat, face, shirt,
+pair of trousers and back item fits either build with no per-type variant.
+Switching build in the avatar editor never costs you an outfit.
+
+## Appearance and privacy
+
+A dark theme ships alongside the light one. It is a second hand-built palette
+rather than an inversion — the chrome keeps its bevels and gradient headers,
+lit from a night sky instead of a white one. The choice is stored on the
+account as well as in the browser, so a phone and a desktop signed into the
+same account agree. `auto` follows the operating system.
+
+The profile editor (`/profile-editor`) carries the description, three **pinned
+items** that sit at the top of the profile, and per-field privacy: who can see
+the friends list, the inventory, the deaths/K-D record, the server you are
+currently in, when you are online, and who can leave profile comments. Every
+setting is enforced on the server, including on the direct `/inventory/<name>`
+URL.
 
 ---
 

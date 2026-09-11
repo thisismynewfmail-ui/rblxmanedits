@@ -5,14 +5,14 @@
   </div>
   <div class="panel-body">
     <form class="inline-form" method="get" action="/users" style="margin-bottom:10px">
-      <input type="search" name="q" value="{{ term }}" placeholder="Find a player" style="width:240px">
+      <input type="search" name="q" value="{{ term }}" placeholder="Find a player" style="flex:1 1 200px;min-width:0">
       <button class="btn">Search</button>
     </form>
-    <div class="itemgrid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+    <div class="itemgrid">
       {% for r in rows %}
       <div class="item" style="text-align:center">
-        <div class="thumb-wrap" style="background:linear-gradient(160deg,#eaf4ff,#c6ddf2);height:130px">
-          <a href="/profile/{{ r.user.username }}">
+        <div class="thumb-wrap" style="background:var(--preview-bg)">
+          <a href="/profile/{{ r.user.username }}" style="display:block;width:92%">
             <canvas class="thumb avatar-thumb" width="200" height="200" data-user="{{ r.user.username }}"></canvas>
           </a>
         </div>
@@ -23,9 +23,14 @@
           <div class="tiny muted">{{ r.friends }} friends</div>
           {% if user and r.user.id != user.id %}
           <div style="margin-top:5px">
-            <button class="btn small go" data-friend="request" data-username="{{ r.user.username }}"
-                    {{ 'disabled' if r.status != 'none' else '' }}>
-              {{ 'Friends' if r.status == 'friends' else ('Pending' if r.status != 'none' else 'Add') }}</button>
+            <button class="btn small {{ 'danger' if r.status == 'pending_out' else 'go' }}"
+                    data-friend="{{ 'remove' if r.status == 'pending_out' else 'request' }}"
+                    data-friend-inline="1" data-username="{{ r.user.username }}"
+                    {{ 'disabled' if r.status in ('friends', 'pending_in') else '' }}>
+              {% if r.status == 'friends' %}Friends
+              {% elif r.status == 'pending_out' %}Request sent
+              {% elif r.status == 'pending_in' %}Wants to be friends
+              {% else %}Add{% endif %}</button>
             <button class="btn small" data-follow-toggle="{{ r.user.username }}">{{ 'Unfollow' if r.following else 'Follow' }}</button>
           </div>
           {% endif %}

@@ -53,8 +53,16 @@ def inventory_of(req: Request, username: str = ""):
     if target is None:
         return R.error(404, "No such player.")
     uid = int(target["id"])
+    viewer = int(req.user["id"]) if req.user else 0
+    # Same privacy rule the profile page applies, enforced here too so the
+    # direct URL is not a way around it.
+    if not users.can_view(target, "inventory", viewer,
+                          bool(req.user and req.user["is_admin"])):
+        return render(req, "inventory_public.html", target=target, items=[],
+                      summary=inventory.summary(uid), tiers=catalog.TIERS,
+                      private=True)
     return render(req, "inventory_public.html", target=target,
-                  items=inventory.list_for_user(uid),
+                  items=inventory.list_for_user(uid), private=False,
                   summary=inventory.summary(uid), tiers=catalog.TIERS)
 
 

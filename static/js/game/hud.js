@@ -10,6 +10,8 @@
     this.chatOpen = false;
     this.chatTeam = false;
     this.scoreboardOpen = false;
+    this.voteOpen = false;
+    this.endCardHold = false;
     this.killFeed = [];
     this.chatLines = [];
     this.toasts = [];
@@ -275,23 +277,53 @@
   HUD.prototype.formatTime = formatTime;
 
   // -------------------------------------------------------------------- vote
+  /* The shuffle vote lives inside the end-of-round card.  That card is a
+     modal overlay, so the mouse is already free and the Yes/No buttons are
+     actually clickable -- which they were not while the panel floated over a
+     pointer-locked game. */
   HUD.prototype.updateVote = function (data) {
     var panel = el('vote');
     if (!panel) return;
     if (!data.open) {
       panel.classList.remove('on');
+      this.voteOpen = false;
       if (data.result !== undefined) {
         this.toast(data.result ? 'Teams shuffled!' : 'Teams stay as they are.',
                    data.result ? 'good' : '');
+        var note = el('vote-result');
+        if (note) {
+          note.textContent = data.result
+            ? 'Teams shuffled for the next round.'
+            : 'Not enough votes -- teams stay as they are.';
+          note.classList.remove('hidden');
+        }
       }
+      this.syncEndCard();
       return;
     }
+    this.voteOpen = true;
     panel.classList.add('on');
+    var note = el('vote-result');
+    if (note) note.classList.add('hidden');
     el('vote-yes').textContent = data.yes;
     el('vote-need').textContent = data.needed;
     el('vote-bar').style.width =
       Math.min(100, (data.yes / Math.max(1, data.needed)) * 100) + '%';
     el('vote-timer').textContent = Math.ceil(data.ends_in || 0);
+    this.syncEndCard();
+  };
+
+  /* The card stays up (and the screen stays locked) for as long as either the
+     result or an open vote needs to be on screen. */
+  HUD.prototype.syncEndCard = function () {
+    var wantCard = this.voteOpen || this.endCardHold;
+    this.show('endcard', !!wantCard);
+    if (wantCard && this.client && !this.client.paused) {
+      if (document.pointerLockElement) document.exitPointerLock();
+    } else if (!wantCard && this.client && !this.client.paused &&
+               !this.chatOpen && this.client.grabMouse) {
+      this.client.grabMouse();
+    }
   };
 
   // ------------------------------------------------------------------ toasts
@@ -386,6 +418,7 @@
     });
     el('btn-thirdperson').addEventListener('click', function () {
       client.toggleCamera();
+      client.setPaused(false);
     });
     el('btn-quit').addEventListener('click', function () {
       client.quit();
@@ -403,6 +436,7 @@
     bindRange('set-far', 'val-far', 'viewDistance', function (v) { return Math.round(v); });
     bindRange('set-vol', 'val-vol', 'volume', function (v) { return Math.round(v * 100) + '%'; });
     bindCheck('set-invert', 'invertY');
+    bindCheck('set-raw', 'rawMouse');
     bindCheck('set-particles', 'particles');
     bindCheck('set-names', 'showNames');
 
@@ -452,9 +486,11 @@
     }).join('');
     return rows +
       '<div class="keyrow"><span>Fire</span><b>Left mouse</b></div>' +
+      '<div class="keyrow"><span>Interact / scope</span><b>Right mouse</b></div>' +
       '<div class="keyrow"><span>Pause</span><b>Esc</b></div>' +
       '<p style="margin-top:10px;font-size:11px">Double click a name in chat or on the ' +
-      'scoreboard to open that player\'s profile in a new tab.</p>' +
+      'scoreboard to open that player\'s profile in a new tab. Alt-Tab and the ' +
+      'Windows key release the mouse without pausing -- only Esc pauses.</p>' +
       '<button class="primary" onclick="document.getElementById(\'helpbox\')' +
       '.classList.remove(\'on\');document.getElementById(\'pause\').classList.add(\'on\')">Back</button>';
   };
@@ -467,6 +503,7 @@
     setValue('set-far', Settings.viewDistance, 'val-far', Math.round(Settings.viewDistance));
     setValue('set-vol', Settings.volume, 'val-vol', Math.round(Settings.volume * 100) + '%');
     check('set-invert', Settings.invertY);
+    check('set-raw', Settings.rawMouse !== false);
     check('set-particles', Settings.particles);
     check('set-names', Settings.showNames);
 
@@ -550,10 +587,40 @@
           row.kills + ' / ' + row.deaths + '</td><td style="text-align:right">' +
           row.score + '</td></tr>';
       }).join('') + '</table></div>';
-    this.show('endcard', true);
+    this.endCardHold = true;
+    this.syncEndCard();
     var self = this;
     clearTimeout(this._endTimer);
-    this._endTimer = setTimeout(function () { self.show('endcard', false); }, 7000);
+    this._endTimer = setTimeout(function () {
+      self.endCardHold = false;
+      self.syncEndCard();
+    }, 9000);
+  };
+
+  HUD.prototype.hideEndCard = function () {
+    clearTimeout(this._endTimer);
+    this.endCardHold = false;
+    this.voteOpen = false;
+    this.syncEndCard();
+  };
+
+  /* Shown when the mouse is free but the round is still running -- alt-tab,
+     the Windows key, a click on another monitor. */
+  HUD.prototype.showFocusHint = function (on) {
+    var node = el('focus-hint');
+    if (node) node.classList.toggle('on', !!on);
+  };
+
+  HUD.prototype.setScope = function (on, zoom) {
+    var node = el('scope');
+    if (node) node.classList.toggle('on', !!on);
+    var crosshair = el('crosshair');
+    if (crosshair) crosshair.classList.toggle('hidden', !!on);
+    var badge = el('zoom-badge');
+    if (badge) {
+      badge.textContent = on ? (zoom || 1).toFixed(1) + 'x' : '';
+      badge.classList.toggle('hidden', !on);
+    }
   };
 
   global.HUD = HUD;

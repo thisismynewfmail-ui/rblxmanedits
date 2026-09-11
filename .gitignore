@@ -1,0 +1,11 @@
+# Python bytecode: regenerated on every run, and the tree already carried a
+# stale set compiled against a different interpreter.
+__pycache__/
+*.py[cod]
+
+# Runtime state. The database is seeded on first boot and the secret is
+# generated per install; neither belongs in the repository.
+data/*.sqlite3
+data/*.sqlite3-wal
+data/*.sqlite3-shm
+data/secret.key

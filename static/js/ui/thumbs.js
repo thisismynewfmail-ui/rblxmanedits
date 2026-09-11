@@ -20,8 +20,12 @@
     var canvas = document.createElement('canvas');
     canvas.width = OFFSCREEN;
     canvas.height = OFFSCREEN;
+    // An explicit CSS size pins clientWidth, so the buffer below is exactly
+    // OFFSCREEN square whatever the display's pixel ratio is.
     canvas.style.position = 'absolute';
     canvas.style.left = '-10000px';
+    canvas.style.width = OFFSCREEN + 'px';
+    canvas.style.height = OFFSCREEN + 'px';
     document.body.appendChild(canvas);
     var renderer = new Renderer(canvas, { preserveDrawingBuffer: true,
                                           antialias: true, transparent: true });
@@ -65,28 +69,70 @@
       }).catch(function () { return null; });
   };
 
+  var THUMB_FOV = 40;
+
+  /* Place the camera so the subject's bounding box fits the frame exactly.
+
+     Fitting a sphere (or, as before, guessing from the box's largest side)
+     wastes room on a tall thin character and crops anything whose interesting
+     surface sits near the camera -- a face decal is a head-radius closer than
+     the centre the distance was measured from, which is what made every face
+     thumbnail a close-up of one eye.  Projecting the eight corners into the
+     camera basis and solving for the distance handles both: ``padding`` 1.0
+     is a tight fit and anything above it is margin. */
   function frameCamera(renderer, parts, padding, angle, tilt) {
     var min = [1e9, 1e9, 1e9], max = [-1e9, -1e9, -1e9];
     parts.forEach(function (part) {
       for (var i = 0; i < 3; i++) {
-        min[i] = Math.min(min[i], part.p[i] - part.s[i] * 0.75);
-        max[i] = Math.max(max[i], part.p[i] + part.s[i] * 0.75);
+        min[i] = Math.min(min[i], part.p[i] - part.s[i] * 0.5);
+        max[i] = Math.max(max[i], part.p[i] + part.s[i] * 0.5);
       }
     });
     if (min[0] > max[0]) { min = [-1, -1, -1]; max = [1, 1, 1]; }
     var centre = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
-    var radius = Math.max(
-      max[0] - min[0], Math.max(max[1] - min[1], max[2] - min[2])) * 0.5;
-    radius = Math.max(radius, 0.6) * (padding || 1.9);
+    var half = [Math.max(0.05, (max[0] - min[0]) / 2),
+                Math.max(0.05, (max[1] - min[1]) / 2),
+                Math.max(0.05, (max[2] - min[2]) / 2)];
+
     angle = angle === undefined ? -0.55 : angle;
     tilt = tilt === undefined ? 0.28 : tilt;
-    var eye = [
-      centre[0] + Math.sin(angle) * radius * 1.6,
-      centre[1] + Math.sin(tilt) * radius * 1.6,
-      centre[2] + Math.cos(angle) * radius * 1.6
+    // unit vector from the subject towards the camera
+    var away = [Math.sin(angle) * Math.cos(tilt), Math.sin(tilt),
+                Math.cos(angle) * Math.cos(tilt)];
+    var forward = [-away[0], -away[1], -away[2]];
+    var right = [-forward[2], 0, forward[0]];
+    var rlen = Math.hypot(right[0], right[2]) || 1;
+    right = [right[0] / rlen, 0, right[2] / rlen];
+    var up = [
+      right[1] * forward[2] - right[2] * forward[1],
+      right[2] * forward[0] - right[0] * forward[2],
+      right[0] * forward[1] - right[1] * forward[0]
     ];
-    renderer.setCameraMatrix(eye, centre, 40);
-    return { centre: centre, radius: radius };
+
+    var tanY = Math.tan((THUMB_FOV * 0.5) * Math.PI / 180);
+    var tanX = tanY * Math.max(0.2, renderer.aspect || 1);
+    var distance = 0.1;
+    for (var cx = -1; cx <= 1; cx += 2) {
+      for (var cy = -1; cy <= 1; cy += 2) {
+        for (var cz = -1; cz <= 1; cz += 2) {
+          var v = [cx * half[0], cy * half[1], cz * half[2]];
+          var px = v[0] * right[0] + v[1] * right[1] + v[2] * right[2];
+          var py = v[0] * up[0] + v[1] * up[1] + v[2] * up[2];
+          var pz = v[0] * forward[0] + v[1] * forward[1] + v[2] * forward[2];
+          // a corner is in shot when |px| <= (d + pz) * tanX, and likewise in y
+          distance = Math.max(distance, Math.abs(px) / tanX - pz,
+                              Math.abs(py) / tanY - pz);
+        }
+      }
+    }
+    distance *= (padding === undefined ? 1.05 : padding);
+    distance = Math.max(distance, half[2] + 0.4);
+    var eye = [centre[0] + away[0] * distance,
+               centre[1] + away[1] * distance,
+               centre[2] + away[2] * distance];
+    renderer.setCameraMatrix(eye, centre, THUMB_FOV);
+    return { centre: centre, radius: Math.hypot(half[0], half[1], half[2]),
+             distance: distance };
   }
 
   function renderParts(parts, options) {
@@ -116,6 +162,16 @@
     return renderer.canvas;
   }
 
+  /* Keep a copy of a render at the source's own size.  Hard-coding a size
+     here silently crops the picture whenever the WebGL buffer is larger. */
+  function snapshot(source) {
+    var copy = document.createElement('canvas');
+    copy.width = source.width;
+    copy.height = source.height;
+    copy.getContext('2d').drawImage(source, 0, 0);
+    return copy;
+  }
+
   function blit(target, source) {
     var ctx = target.getContext('2d');
     if (!ctx) return;
@@ -135,7 +191,7 @@
                  decSlot: piece.decal ? Textures.decal(piece.decal) : null };
       });
       if (!parts.length) parts.push({ t: 'box', p: [0, 0, 0], s: [1, 1, 1], c: '#c8cbcd' });
-      return { parts: parts, angle: -0.62, tilt: 0.15, padding: 1.55,
+      return { parts: parts, angle: -0.62, tilt: 0.15, padding: 1.12,
                anchor: [0, 0.35, 0] };
     }
     if (slot === 'usable') {
@@ -143,12 +199,13 @@
         return { t: piece.t || 'box', p: piece.p.slice(), s: piece.s.slice(),
                  c: piece.c, r: piece.r, m: piece.m };
       });
-      return { parts: weaponParts, angle: -1.15, tilt: 0.42, padding: 1.5 };
+      return { parts: weaponParts, angle: -1.15, tilt: 0.42, padding: 1.08 };
     }
     // wearable clothing/faces are shown on a mannequin
     var descriptor = {
       colors: { head: '#f5cd30', torso: '#c8cbcd', left_arm: '#f5cd30',
                 right_arm: '#f5cd30', left_leg: '#a3a2a5', right_leg: '#a3a2a5' },
+      body_type: Thumbs.mannequinBody || 'male',
       items: {}
     };
     descriptor.items[slot] = { item_id: item.id, slot: slot, data: data,
@@ -162,17 +219,23 @@
                                           yaw: faceOn ? 0 : 0.4,
                                           pose: Avatar.pose('idle', 0, 0) });
     if (faceOn) {
-      return { parts: body.filter(function (p) { return p.p[1] > 3.9; }),
-               angle: 0.0, tilt: 0.04, padding: 1.35 };
+      // head only, picked by rig tag rather than a height guess so the crop
+      // survives any change to the proportions
+      return { parts: body.filter(function (p) { return p.k === 'head'; }),
+               angle: 0.0, tilt: 0.02, padding: 1.05 };
     }
-    return { parts: body, angle: -0.45, tilt: 0.18, padding: 1.35 };
+    if (slot === 'pants') {
+      return { parts: body, angle: -0.4, tilt: -0.1, padding: 1.06 };
+    }
+    return { parts: body, angle: -0.45, tilt: 0.18, padding: 1.06 };
   };
 
   Thumbs.renderItem = function (canvas, itemId, effect) {
     Thumbs.loadCatalog().then(function (catalog) {
       var item = catalog[itemId];
       if (!item) return;
-      var key = 'item:' + itemId + ':' + (effect || '');
+      var key = 'item:' + itemId + ':' + (effect || '') + ':' +
+        (Thumbs.mannequinBody || 'male');
       if (Thumbs.imageCache[key]) { blit(canvas, Thumbs.imageCache[key]); return; }
       var spec = Thumbs.itemParts(item, effect);
       var source = renderParts(spec.parts, {
@@ -180,11 +243,8 @@
         effect: effect, anchor: spec.anchor
       });
       if (!source) return;
-      var copy = document.createElement('canvas');
-      copy.width = OFFSCREEN; copy.height = OFFSCREEN;
-      copy.getContext('2d').drawImage(source, 0, 0);
-      Thumbs.imageCache[key] = copy;
-      blit(canvas, copy);
+      Thumbs.imageCache[key] = snapshot(source);
+      blit(canvas, Thumbs.imageCache[key]);
     });
   };
 
@@ -200,16 +260,13 @@
         });
         var hat = (descriptor.items || {}).hat;
         var source = renderParts(parts, {
-          angle: -0.35, tilt: 0.12, padding: 1.28,
+          angle: -0.35, tilt: 0.12, padding: 1.07,
           effect: hat && hat.tier === 'unusual' ? hat.effect : '',
           anchor: hat ? Avatar.hatAnchor([0, 0, 0], 0, hat) : null
         });
         if (!source) return;
-        var copy = document.createElement('canvas');
-        copy.width = OFFSCREEN; copy.height = OFFSCREEN;
-        copy.getContext('2d').drawImage(source, 0, 0);
-        Thumbs.imageCache[key] = copy;
-        blit(canvas, copy);
+        Thumbs.imageCache[key] = snapshot(source);
+        blit(canvas, Thumbs.imageCache[key]);
       });
   };
 
@@ -296,11 +353,8 @@
     parts.forEach(function (part) { renderer.push(part); });
     renderer.setCameraMatrix([44, 34, 62], [0, 5, -2], 42);
     renderer.render();
-    var copy = document.createElement('canvas');
-    copy.width = 512; copy.height = 288;
-    copy.getContext('2d').drawImage(renderer.canvas, 0, 0);
-    Thumbs.imageCache[key] = copy;
-    blit(canvas, copy);
+    Thumbs.imageCache[key] = snapshot(renderer.canvas);
+    blit(canvas, Thumbs.imageCache[key]);
     renderer.transparentBackground = true;
     renderer.canvas.width = previous.w;
     renderer.canvas.height = previous.h;
@@ -324,8 +378,7 @@
       return;
     }
     this.particles = new Particles(this.renderer.gl);
-    this.renderer.setSky({ top: '#bcdcf5', horizon: '#f4f9fc', sun: [0.4, 0.8, 0.35],
-                           clouds: 0.18, tint: '#ffffff' });
+    this.applyTheme();
     this.renderer.far = 200;
     this.angle = -0.45;
     this.tilt = 0.2;
@@ -339,20 +392,43 @@
 
   LivePreview.prototype.bindInput = function () {
     var self = this;
-    var dragging = false, lastX = 0, lastY = 0;
+    var dragging = false, decided = false, touch = false;
+    var lastX = 0, lastY = 0, startX = 0, startY = 0;
+    // On a touch screen the preview must not eat a vertical page scroll, so a
+    // drag only claims the gesture once it is clearly sideways.
+    this.canvas.style.touchAction = 'pan-y';
     this.canvas.addEventListener('pointerdown', function (e) {
-      dragging = true; lastX = e.clientX; lastY = e.clientY;
-      self.spin = false;
-      self.canvas.setPointerCapture(e.pointerId);
+      dragging = true;
+      touch = e.pointerType === 'touch';
+      decided = !touch;
+      lastX = startX = e.clientX; lastY = startY = e.clientY;
+      if (!touch) {
+        self.spin = false;
+        self.canvas.setPointerCapture(e.pointerId);
+      }
     });
     this.canvas.addEventListener('pointermove', function (e) {
       if (!dragging) return;
+      if (!decided) {
+        var dx = Math.abs(e.clientX - startX);
+        var dy = Math.abs(e.clientY - startY);
+        if (dx < 6 && dy < 6) return;
+        if (dy > dx) { dragging = false; return; }   // let the page scroll
+        decided = true;
+        self.spin = false;
+        self.canvas.style.touchAction = 'none';
+        try { self.canvas.setPointerCapture(e.pointerId); } catch (err) {}
+      }
       self.angle -= (e.clientX - lastX) * 0.011;
       self.tilt = Math.max(-0.7, Math.min(0.95, self.tilt + (e.clientY - lastY) * 0.008));
       lastX = e.clientX; lastY = e.clientY;
     });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (name) {
-      self.canvas.addEventListener(name, function () { dragging = false; });
+      self.canvas.addEventListener(name, function () {
+        dragging = false;
+        decided = false;
+        self.canvas.style.touchAction = 'pan-y';
+      });
     });
     this.canvas.addEventListener('wheel', function (e) {
       e.preventDefault();
@@ -362,6 +438,20 @@
 
   LivePreview.prototype.setDescriptor = function (descriptor) {
     this.descriptor = descriptor;
+  };
+
+  /* The preview draws its own sky, so it has to follow the site theme or a
+     dark page ends up with a bright white window punched in it. */
+  LivePreview.prototype.applyTheme = function () {
+    var dark = window.Site ? Site.isDark() : false;
+    this.dark = dark;
+    this.renderer.setSky(dark
+      ? { top: '#16222e', horizon: '#243545', sun: [0.4, 0.8, 0.35],
+          clouds: 0.0, tint: '#4c6580' }
+      : { top: '#bcdcf5', horizon: '#f4f9fc', sun: [0.4, 0.8, 0.35],
+          clouds: 0.18, tint: '#ffffff' });
+    // keep a little ambient bounce so a dark scene does not crush the model
+    this.renderer.setAmbient(dark ? '#43586e' : '#8f9fb5');
   };
 
   LivePreview.prototype.loop = function (now) {
@@ -377,6 +467,12 @@
       position: [0, 0, 0], yaw: 0, time: this.time,
       pose: Avatar.pose('idle', this.time, 0)
     });
+    // The projection fixes the vertical field of view, so a narrow panel is
+    // the one that crops: pull the camera back until the character's width
+    // fits again.  Wide panels are already fine and are left alone.
+    var aspect = this.renderer.aspect || 1;
+    var distance = this.distance *
+      Math.max(1, 0.78 / Math.max(0.2, aspect));
     this.renderer.beginFrame(dt);
     parts.forEach(function (part) { this.renderer.push(part); }, this);
     // simple ground shadow
@@ -384,9 +480,9 @@
                           [0.35, 0.42, 0.5], 0.32, 0, 0, 0.8, null);
     var centre = [0, 2.9, 0];
     var eye = [
-      centre[0] + Math.sin(this.angle) * this.distance,
-      centre[1] + Math.sin(this.tilt) * this.distance * 0.85 + 0.6,
-      centre[2] + Math.cos(this.angle) * this.distance
+      centre[0] + Math.sin(this.angle) * distance,
+      centre[1] + Math.sin(this.tilt) * distance * 0.85 + 0.6,
+      centre[2] + Math.cos(this.angle) * distance
     ];
     this.renderer.setCameraMatrix(eye, centre, 42);
     var hat = (this.descriptor.items || {}).hat;
@@ -402,6 +498,12 @@
   };
 
   Thumbs.LivePreview = LivePreview;
+
+  Thumbs.retheme = function () {
+    document.querySelectorAll('.avatar-view').forEach(function (el) {
+      if (el.__preview && el.__preview.applyTheme) el.__preview.applyTheme();
+    });
+  };
 
   // ---------------------------------------------------------------- boot
   function observe() {
@@ -448,6 +550,7 @@
       });
       document.querySelectorAll('.avatar-view[data-avatar-demo]').forEach(function (el) {
         el.__preview = new LivePreview(el, {
+          body_type: el.dataset.avatarDemo === 'female' ? 'female' : 'male',
           colors: { head: '#f5cd30', torso: '#c4281c', left_arm: '#f5cd30',
                     right_arm: '#f5cd30', left_leg: '#1b2a35', right_leg: '#1b2a35' },
           items: {

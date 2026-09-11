@@ -17,6 +17,17 @@ window.BH = {
 </script>
 </head>
 <body>
+<div id="mobile-block">
+  <div class="card">
+    <h1>{{ world.name }}</h1>
+    <p>The Game View runs on a desktop browser: it needs a keyboard, a mouse and pointer
+       lock, none of which a phone can provide yet.</p>
+    <p>Everything else on {{ SITE_NAME }} works here &mdash; your profile, avatar editor,
+       inventory, market and messages.</p>
+    <a class="back" href="/worlds/{{ world.id }}">World details</a>
+    <a class="back" href="/">Back to {{ SITE_NAME }}</a>
+  </div>
+</div>
 <div id="game-root">
   <canvas id="view"></canvas>
 
@@ -26,7 +37,11 @@ window.BH = {
       <span class="badge2" id="instance-badge">instance --</span>
       <span class="badge2" id="view-badge">1st person</span>
       <span class="badge2" id="ping-badge">-- ms</span>
+      <span class="badge2 hidden" id="zoom-badge"></span>
     </div>
+    <!-- shown when the mouse has left the window but the round is still live -->
+    <div id="focus-hint"><b>Click to take the mouse back</b>
+      <span>Alt-Tab and the Windows key will not pause the game &mdash; only Esc does.</span></div>
     <div id="perf"></div>
 
     <div id="objective">
@@ -59,6 +74,7 @@ window.BH = {
     <div id="coins"><span class="c">&#9679;</span> <span id="coin-amount">0</span> coins</div>
     <div id="hotbar-hud"></div>
 
+    <div id="scope"><i class="ring"></i><i class="cross-v"></i><i class="cross-h"></i></div>
     <div id="crosshair"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="dot"></i></div>
     <div id="hitmarker"><svg viewBox="0 0 34 34"><g stroke="#ff4d3d" stroke-width="3" stroke-linecap="round">
       <line x1="6" y1="6" x2="13" y2="13"/><line x1="28" y1="6" x2="21" y2="13"/>
@@ -79,27 +95,15 @@ window.BH = {
       <div style="margin-top:6px;font-size:10px;opacity:.7">Double click a name to open that profile in a new tab.</div>
     </div>
 
-    <div id="vote">
-      <h3>Shuffle the teams?</h3>
-      <div class="count"><span id="vote-yes">0</span> / <span id="vote-need">0</span></div>
-      <div class="bar"><i id="vote-bar" style="width:0%"></i></div>
-      <div style="display:flex;gap:4%">
-        <button class="yes" id="vote-yes-btn">Yes</button>
-        <button class="no" id="vote-no-btn">No</button>
-      </div>
-      <div class="timer"><span id="vote-timer">30</span>s left &bull; needs 80%</div>
-    </div>
-
     <div class="overlay" id="pause">
       <div class="menu">
         <div class="mhead"><span>Paused</span><span id="pause-world">{{ world.name }}</span></div>
         <div class="mbody">
           <button class="primary" id="btn-resume">Resume</button>
           <button id="btn-settings">Settings &amp; key bindings</button>
-          <button id="btn-thirdperson">Toggle camera (P)</button>
+          <button id="btn-thirdperson">Toggle camera (G)</button>
           <button id="btn-help">Controls</button>
-          <a class="btn" href="/worlds">Back to the world browser</a>
-          <button class="danger" id="btn-quit">Quit to my profile</button>
+          <button class="danger" id="btn-quit">Quit</button>
         </div>
       </div>
     </div>
@@ -114,6 +118,7 @@ window.BH = {
           <div class="rowline"><label>Field of view</label>
             <input type="range" id="set-fov" min="60" max="110" step="1"><span class="val" id="val-fov"></span></div>
           <div class="rowline"><label>Invert Y</label><input type="checkbox" id="set-invert"></div>
+          <div class="rowline"><label>Raw mouse input</label><input type="checkbox" id="set-raw"></div>
           <h3>Display</h3>
           <div class="rowline"><label>Render scale</label>
             <input type="range" id="set-scale" min="0.5" max="1" step="0.05"><span class="val" id="val-scale"></span></div>
@@ -139,10 +144,24 @@ window.BH = {
       </div>
     </div>
 
+    <!-- The round result and the shuffle vote share one modal card: the
+         screen is locked while it is up, so the vote buttons are reachable
+         instead of sitting behind a pointer-locked game view. -->
     <div class="overlay" id="endcard">
       <div class="menu">
         <div class="mhead"><span id="end-title">Round over</span></div>
         <div class="mbody center" id="end-body"></div>
+        <div id="vote">
+          <h3>Shuffle the teams for the next round?</h3>
+          <div class="count"><span id="vote-yes">0</span> / <span id="vote-need">0</span></div>
+          <div class="bar"><i id="vote-bar" style="width:0%"></i></div>
+          <div class="votebtns">
+            <button class="yes" id="vote-yes-btn">Yes, shuffle</button>
+            <button class="no" id="vote-no-btn">No, keep teams</button>
+          </div>
+          <div class="timer"><span id="vote-timer">30</span>s left &bull; needs 80%</div>
+        </div>
+        <div id="vote-result" class="hidden"></div>
       </div>
     </div>
   </div>
@@ -152,8 +171,9 @@ window.BH = {
     <div class="tag">{{ world.tagline }}</div>
     <div class="bar"><i id="load-bar"></i></div>
     <div class="msg" id="load-msg">Connecting to the game host...</div>
-    <div class="tips">Y opens chat &bull; P toggles first/third person &bull; Tab shows the scoreboard
-      &bull; Esc pauses. Double click a name in chat to open their profile.</div>
+    <div class="tips">Y opens chat &bull; G toggles first/third person &bull; right click
+      interacts or scopes &bull; Tab shows the scoreboard &bull; Esc pauses.
+      Double click a name in chat to open their profile.</div>
   </div>
 </div>
 

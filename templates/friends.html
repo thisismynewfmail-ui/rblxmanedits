@@ -11,7 +11,7 @@
     </div>
 
     {% if tab == 'requests' %}
-      <table class="grid">
+      <div class="tablewrap"><table class="grid">
         <tr><th>Player</th><th>Asked</th><th class="right">Action</th></tr>
         {% for r in incoming %}
         <tr>
@@ -23,18 +23,18 @@
           </td>
         </tr>
         {% endfor %}
-      </table>
+      </table></div>
       {% if not incoming %}<p class="muted">No pending requests.</p>{% endif %}
 
     {% elif tab == 'sent' %}
-      <table class="grid">
+      <div class="tablewrap"><table class="grid">
         <tr><th>Player</th><th>Sent</th><th class="right">Action</th></tr>
         {% for r in outgoing %}
         <tr><td><a href="/profile/{{ r.username }}">{{ r.username }}</a></td>
             <td class="muted">{{ ago(r.requested_at) }}</td>
             <td class="right"><button class="btn small" data-friend="decline" data-username="{{ r.username }}">Cancel</button></td></tr>
         {% endfor %}
-      </table>
+      </table></div>
       {% if not outgoing %}<p class="muted">No outgoing requests.</p>{% endif %}
 
     {% elif tab == 'followers' or tab == 'following' %}

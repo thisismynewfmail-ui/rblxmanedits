@@ -141,6 +141,29 @@
       });
     }
 
+    // ----------------------------------------------------------- body type
+    document.querySelectorAll('[data-body]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        if (button.classList.contains('on')) return;
+        Site.post('/api/avatar/body', { body_type: button.dataset.body })
+          .then(function (res) {
+            if (!res.ok) { Site.toast(res.error, 'bad'); return; }
+            document.querySelectorAll('[data-body]').forEach(function (other) {
+              other.classList.toggle('on', other === button);
+            });
+            // mannequin previews in the slot pickers follow the chosen build
+            if (window.Thumbs) {
+              Thumbs.mannequinBody = res.body_type;
+              Thumbs.rescan();
+            }
+            applyDescriptor(res.avatar);
+            Site.toast('Body type updated.');
+          });
+      });
+    });
+    var currentBody = document.querySelector('[data-body].on');
+    if (currentBody && window.Thumbs) Thumbs.mannequinBody = currentBody.dataset.body;
+
     var spin = document.getElementById('spin-toggle');
     if (spin) {
       spin.addEventListener('click', function () {

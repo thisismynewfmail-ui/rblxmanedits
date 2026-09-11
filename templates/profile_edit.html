@@ -1,0 +1,110 @@
+{% include "partials/head.html" %}
+<form method="post" action="/profile-editor" id="profile-editor">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+<div class="row">
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head">
+        <span>Edit profile</span>
+        <span class="head-links"><a href="/profile/{{ user.username }}">View my profile</a></span>
+      </div>
+      <div class="panel-body">
+        <div class="field">
+          <label for="blurb">About me</label>
+          <textarea id="blurb" name="blurb" rows="4" maxlength="400">{{ user.blurb }}</textarea>
+        </div>
+        <div class="field">
+          <label for="location">Location</label>
+          <input type="text" id="location" name="location" value="{{ user.location }}" maxlength="60">
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="pins">
+      <div class="panel-head purple">
+        <span>&#9733; Pinned items</span>
+        <span class="head-links">up to {{ pin_slots }}, shown at the top of your profile</span>
+      </div>
+      <div class="panel-body">
+        <p class="muted">Pick the three pieces you want people to see first. Everything else
+          stays in your inventory strip.</p>
+        <div class="pinrow" id="pin-preview">
+          {% for i in range(pin_slots) %}
+          <div class="pinslot" data-pin-preview="{{ i }}">empty</div>
+          {% endfor %}
+        </div>
+        <hr>
+        <div class="slotpick" id="pin-pool">
+          {% for it in owned %}
+          <div class="pick {{ 'on' if it.inv_id in pinned else '' }} {{ 'unusual' if it.tier == 'unusual' else '' }}"
+               data-pin="{{ it.inv_id }}" data-name="{{ it.name }}" data-item="{{ it.item_id }}"
+               data-effect="{{ it.effect }}" data-tier="{{ it.tier }}"
+               title="{{ it.name }}">
+            <canvas width="128" height="128" class="item-thumb"
+                    data-item="{{ it.item_id }}" data-effect="{{ it.effect }}"></canvas>
+            <span>{{ it.name }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% if not owned %}<p class="muted">You do not own anything yet &mdash;
+          <a href="/market">visit the market</a>.</p>{% endif %}
+        {% for i in range(pin_slots) %}
+        <input type="hidden" name="pin_{{ i }}" id="pin-field-{{ i }}"
+               value="{{ pinned[i] if i < len(pinned) else 0 }}">
+        {% endfor %}
+      </div>
+      <div class="panel-foot"><span id="pin-status" class="muted">Click an item to pin or unpin it.</span></div>
+    </div>
+  </div>
+
+  <div class="col-side">
+    <div class="panel">
+      <div class="panel-head red">Privacy</div>
+      <div class="panel-body">
+        <p class="muted">Administrators can always see everything; friends means accepted
+          friends only.</p>
+        {% for field, label in privacy_labels %}
+        <div class="field">
+          <label for="privacy-{{ field }}">{{ label }}</label>
+          <select id="privacy-{{ field }}" name="privacy_{{ field }}">
+            {% for level in visibilities %}
+            <option value="{{ level }}" {{ 'selected' if privacy[field] == level else '' }}>
+              {{ 'Everyone' if level == 'public' else ('Friends only' if level == 'friends' else 'Only me') }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Appearance</div>
+      <div class="panel-body">
+        <div class="spread">
+          <span>Dark mode</span>
+          <button class="themetoggle" type="button" aria-pressed="false"
+                  aria-label="Toggle dark mode">
+            <span class="sky"><i></i><i></i><i></i><i></i></span>
+            <span class="knob"></span>
+          </button>
+        </div>
+        <p class="tiny muted" style="margin-top:8px">Saved to your account, so your phone and
+          your desktop stay in step.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Other settings</div>
+      <div class="panel-body">
+        <p class="muted">Your password and in-game controls live in
+          <a href="/settings">account settings</a> and the in-game pause menu.</p>
+      </div>
+    </div>
+
+    <button class="btn primary big block" type="submit">Save profile</button>
+  </div>
+</div>
+</form>
+{% set page_script = "/static/js/ui/profile_edit.js" %}
+{% include "partials/foot.html" %}

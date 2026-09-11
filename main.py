@@ -44,15 +44,6 @@ def local_ip() -> str:
             return "127.0.0.1"
 
 
-BANNER = r"""
-  ____  _     ___   ____ _  ___   _    ___     _______ _   _
- | __ )| |   / _ \ / ___| |/ / | | |  / \ \   / / ____| \ | |
- |  _ \| |  | | | | |   | ' /| |_| | / _ \ \ / /|  _| |  \| |
- | |_) | |__| |_| | |___| . \|  _  |/ ___ \ V / | |___| |\  |
- |____/|_____\___/ \____|_|\_\_| |_/_/   \_\_/  |_____|_| \_|
-"""
-
-
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Run the BLOCKHAVEN platform")
     parser.add_argument("--port", type=int, default=config.HTTP_PORT)
@@ -62,6 +53,9 @@ def main(argv=None) -> int:
     parser.add_argument("--reset", action="store_true",
                         help="delete the database and start fresh")
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--status-interval", type=float, default=10.0,
+                        help="seconds between terminal status blocks "
+                             "(0 turns the live read-out off)")
     args = parser.parse_args(argv)
 
     if args.debug:
@@ -99,20 +93,22 @@ def main(argv=None) -> int:
         return 1
 
     address = local_ip()
-    print(BANNER)
-    print("  %s  --  %s" % (config.SITE_NAME, config.SITE_TAGLINE))
-    print("  " + "-" * 62)
-    print("  Website     http://%s:%d/" % (address, args.port))
-    print("  Local       http://127.0.0.1:%d/" % args.port)
-    print("  Admin       http://%s:%d/admin-dashboard  (%s / %s)"
-          % (address, args.port, config.ADMIN_USERNAME, config.ADMIN_PASSWORD))
-    if not args.no_games:
-        from app.models import worlds as world_registry
-        for world in world_registry.all_worlds():
-            print("  World       http://%s:%d/%-16s %s"
-                  % (address, args.port, world["id"], world["name"]))
-    print("  " + "-" * 62)
-    print("  Ctrl+C to stop.\n", flush=True)
+    from app import console
+    from app.models import worlds as world_registry
+
+    dashboard = console.Dashboard(application, args.port, address,
+                                  supervisor=supervisor,
+                                  interval=max(2.0, args.status_interval or 10.0))
+    print(dashboard.intro(world_registry.all_worlds(),
+                          (config.ADMIN_USERNAME, config.ADMIN_PASSWORD),
+                          not args.no_games), flush=True)
+    dashboard.note("web server listening on port %d" % args.port)
+    if supervisor is not None:
+        dashboard.note("supervising %d game host%s"
+                       % (len(world_registry.all_worlds()),
+                          "" if len(world_registry.all_worlds()) == 1 else "s"))
+    if args.status_interval and args.status_interval > 0:
+        dashboard.start()
 
     stopping = threading.Event()
 
@@ -120,6 +116,7 @@ def main(argv=None) -> int:
         if stopping.is_set():
             return
         stopping.set()
+        dashboard.stop()
         print("\n[main] shutting down...", flush=True)
         threading.Thread(target=server.shutdown, daemon=True).start()
         if supervisor:
@@ -139,6 +136,9 @@ def main(argv=None) -> int:
         if not stopping.is_set():
             shutdown()
         server.server_close()
+    print(console.dim("  served %s requests over %s"
+                      % (f"{getattr(application, 'request_count', 0):,}",
+                         console.human_time(time.time() - dashboard.started))))
     print("[main] bye.")
     return 0
 

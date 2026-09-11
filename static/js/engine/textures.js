@@ -4,7 +4,7 @@
   'use strict';
 
   var CELL = 128;
-  var GRID = 8;                 // 8x8 cells -> 1024x1024 atlas
+  var GRID = 10;                // 10x10 cells -> 1280x1280 atlas
   var SIZE = CELL * GRID;
 
   var Textures = {
@@ -31,7 +31,10 @@
   function allocate(name) {
     if (Textures.slots[name]) return Textures.slots[name];
     var index = Textures.nextSlot++;
-    if (index >= GRID * GRID) { index = 0; }
+    // slot 0 is the plain white square every untextured part samples, so an
+    // overflowing atlas recycles cells from 1 upwards rather than stamping
+    // artwork over it.
+    if (index >= GRID * GRID) index = 1 + ((index - 1) % (GRID * GRID - 1));
     var cx = (index % GRID), cy = Math.floor(index / GRID);
     var slot = { u: cx / GRID, v: cy / GRID, s: 1 / GRID, x: cx * CELL, y: cy * CELL,
                  index: index };

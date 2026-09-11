@@ -41,6 +41,8 @@
     this.nextFire = 0;
     this.firing = false;
     this.thirdPerson = false;
+    this.scoped = false;
+    this.mouseGrabbed = false;
     this.paused = false;
     this.keys = {};
     this.time = 0;
@@ -85,32 +87,54 @@
 
     canvas.addEventListener('click', function () {
       if (self.paused || self.hud.chatOpen) return;
-      if (!document.pointerLockElement) canvas.requestPointerLock();
+      // Fullscreen needs a user gesture, so it is requested on the same click
+      // that grabs the mouse rather than on load.
+      self.enterFullscreen();
+      self.grabMouse();
       self.audio.resume();
     });
 
+    /* Losing the pointer lock is not the same thing as wanting the game
+       paused.  Alt-tabbing, hitting the Windows key or clicking another
+       monitor releases the mouse cleanly and the round keeps running; only
+       Esc opens the pause menu.  The overlay below tells the player how to
+       get the mouse back. */
     document.addEventListener('pointerlockchange', function () {
       var locked = document.pointerLockElement === canvas;
       canvas.classList.toggle('freelook', !locked);
-      if (!locked && !self.hud.chatOpen && !self.paused) self.setPaused(true);
+      self.mouseGrabbed = locked;
+      if (!locked) { self.firing = false; self.keys = {}; }
+      if (!self.paused && !self.hud.chatOpen) self.hud.showFocusHint(!locked);
     });
 
     document.addEventListener('mousemove', function (event) {
       if (document.pointerLockElement !== canvas) return;
-      var sens = Settings.sensitivity * 0.006;
-      self.local.yaw -= event.movementX * sens;
-      var dy = event.movementY * sens * (Settings.invertY ? -1 : 1);
-      self.local.pitch = Math.max(-1.5, Math.min(1.5, self.local.pitch - dy));
+      // Raw device deltas: movementX/Y before any browser smoothing, so the
+      // aim tracks the hand 1:1.
+      var raw = Settings.rawMouse !== false;
+      var dx = raw && event.movementX !== undefined
+        ? (event.mozMovementX !== undefined ? event.mozMovementX : event.movementX)
+        : event.movementX;
+      var dy = raw && event.movementY !== undefined
+        ? (event.mozMovementY !== undefined ? event.mozMovementY : event.movementY)
+        : event.movementY;
+      var sens = Settings.sensitivity * 0.006 * self.aimScale();
+      self.local.yaw -= (dx || 0) * sens;
+      var pitchDelta = (dy || 0) * sens * (Settings.invertY ? -1 : 1);
+      self.local.pitch = Math.max(-1.5, Math.min(1.5, self.local.pitch - pitchDelta));
     });
 
     document.addEventListener('mousedown', function (event) {
       if (self.paused || self.hud.chatOpen) return;
       if (document.pointerLockElement !== canvas) return;
       if (event.button === 0) { self.firing = true; self.tryFire(); }
-      if (event.button === 2) self.toggleCamera();
+      // Right click is the secondary action: scope or use the held item if it
+      // has one, otherwise it does exactly what E does.
+      if (event.button === 2) { event.preventDefault(); self.secondary(true); }
     });
     document.addEventListener('mouseup', function (event) {
       if (event.button === 0) self.firing = false;
+      if (event.button === 2) self.secondary(false);
     });
     canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
@@ -134,6 +158,7 @@
         return;
       }
       if (self.paused) return;
+      if (!self.mouseGrabbed && !action) return;
       if (action === 'scoreboard') { event.preventDefault(); self.hud.toggleScoreboard(true); return; }
       if (action === 'chat') { event.preventDefault(); self.hud.openChat(false); return; }
       if (action === 'teamchat') { event.preventDefault(); self.hud.openChat(true); return; }
@@ -154,7 +179,12 @@
       if (action) self.keys[action] = false;
     });
 
+    // Tabbing away releases the keys so the character does not run on, but the
+    // match keeps going and the game stays unpaused.
     window.addEventListener('blur', function () { self.keys = {}; self.firing = false; });
+    window.addEventListener('focus', function () {
+      if (!self.paused && !self.hud.chatOpen) self.hud.showFocusHint(!self.mouseGrabbed);
+    });
     window.addEventListener('resize', function () { self.renderer.resize(); });
 
     var chatInput = document.getElementById('chat-input');
@@ -176,16 +206,30 @@
     if (!this.paused) this.canvas.requestPointerLock();
   };
 
+  Client.prototype.grabMouse = function () {
+    if (document.pointerLockElement === this.canvas) return;
+    var request = this.canvas.requestPointerLock({ unadjustedMovement: true });
+    // unadjustedMovement is only supported on some platforms; the promise
+    // form rejects there, so fall back to a plain lock.
+    if (request && typeof request.catch === 'function') {
+      var canvas = this.canvas;
+      request.catch(function () {
+        try { canvas.requestPointerLock(); } catch (e) {}
+      });
+    }
+  };
+
   Client.prototype.setPaused = function (value) {
     this.paused = value;
     this.hud.show('pause', value);
     if (!value) {
       this.hud.show('settings', false);
       this.hud.show('helpbox', false);
-      if (!this.hud.chatOpen) this.canvas.requestPointerLock();
+      if (!this.hud.chatOpen) this.grabMouse();
     } else if (document.pointerLockElement) {
       document.exitPointerLock();
     }
+    if (value) this.hud.showFocusHint(false);
   };
 
   Client.prototype.toggleCamera = function () {
@@ -195,9 +239,72 @@
     this.hud.toast(this.thirdPerson ? 'Third person' : 'First person');
   };
 
+  /* Right mouse: a scope or an activatable held item takes priority, and
+     anything else falls through to the same thing E does. */
+  Client.prototype.secondary = function (down) {
+    var stats = this.weaponStats();
+    if (stats && stats.scope) {
+      this.scoped = !!down;
+      this.hud.setScope(this.scoped, stats.scope);
+      return;
+    }
+    if (stats && stats.kind === 'support') {
+      if (down) this.tryFire();
+      return;
+    }
+    if (down) this.interact();
+  };
+
+  /* Zoom narrows the field of view, so the same hand movement has to turn the
+     view by less or aiming through a scope becomes unusable. */
+  Client.prototype.aimScale = function () {
+    if (!this.scoped) return 1;
+    var stats = this.weaponStats();
+    var zoom = (stats && stats.scope) || 1;
+    return 1 / Math.max(1, zoom);
+  };
+
+  Client.prototype.currentFov = function () {
+    if (!this.scoped) return Settings.fov;
+    var stats = this.weaponStats();
+    var zoom = (stats && stats.scope) || 1;
+    return Math.max(12, Settings.fov / Math.max(1, zoom));
+  };
+
+  /* The Game View asks for real fullscreen on the way in and gives it back on
+     the way out, so quitting leaves the browser exactly as it was found. */
+  Client.prototype.enterFullscreen = function () {
+    if (this.wasFullscreen === undefined) {
+      this.wasFullscreen = !!document.fullscreenElement;
+    }
+    if (document.fullscreenElement) return;
+    var root = document.documentElement;
+    var request = root.requestFullscreen || root.webkitRequestFullscreen ||
+                  root.msRequestFullscreen;
+    if (!request) return;
+    try {
+      var result = request.call(root, { navigationUI: 'hide' });
+      if (result && typeof result.catch === 'function') result.catch(function () {});
+    } catch (e) { /* a user gesture is required; the click handler retries */ }
+  };
+
+  Client.prototype.restoreFullscreen = function () {
+    // Only undo what we did: a player who was already in F11 stays in it.
+    if (this.wasFullscreen) return;
+    if (!document.fullscreenElement) return;
+    var exit = document.exitFullscreen || document.webkitExitFullscreen ||
+               document.msExitFullscreen;
+    if (!exit) return;
+    try {
+      var result = exit.call(document);
+      if (result && typeof result.catch === 'function') result.catch(function () {});
+    } catch (e) {}
+  };
+
   Client.prototype.selectSlot = function (index) {
     if (index < 0 || index > 4) return;
     if (!this.avatar.hotbar[index]) return;
+    if (this.scoped) { this.scoped = false; this.hud.setScope(false); }
     this.slot = index;
     this.hud.setSlot(index);
     this.net.send({ t: 'slot', i: index });
@@ -209,9 +316,26 @@
     if (this.extras) this.extras.interact();
   };
 
+  /* Quit returns to whatever page the player launched from -- usually the
+     world they were just looking at -- and hands the browser's fullscreen
+     state back the way it was found. */
   Client.prototype.quit = function () {
     this.net.close();
-    window.location.href = '/profile/' + encodeURIComponent(BH.user.name);
+    this.restoreFullscreen();
+    var target = '/profile/' + encodeURIComponent(BH.user.name);
+    try {
+      var stored = sessionStorage.getItem('blockhaven.returnTo');
+      if (stored && stored.charAt(0) === '/' && stored.charAt(1) !== '/') {
+        target = stored;
+      } else if (document.referrer) {
+        var ref = new URL(document.referrer);
+        if (ref.origin === location.origin && ref.pathname !== location.pathname) {
+          target = ref.pathname + ref.search;
+        }
+      }
+    } catch (e) { /* fall back to the profile */ }
+    // give the browser a moment to leave fullscreen before navigating
+    setTimeout(function () { window.location.href = target; }, 60);
   };
 
   // ------------------------------------------------------------------- net
@@ -319,7 +443,7 @@
       self.audio.play('capture');
     });
     net.on('round_start', function (msg) {
-      self.hud.show('endcard', false);
+      self.hud.hideEndCard();
       self.hud.toast('Round ' + msg.round + ' -- go!', 'good', true);
       if (msg.state) self.onState(msg.state);
     });
@@ -530,7 +654,9 @@
   Client.prototype.onEffect = function (msg) {
     if (msg.k === 'shot') {
       var shooter = this.players[msg.id];
-      var origin = msg.o || (shooter ? [shooter.pos[0], shooter.pos[1] + 4.85, shooter.pos[2]] : null);
+      var origin = msg.o || (shooter ? [shooter.pos[0],
+                                        shooter.pos[1] + Avatar.EYE_HEIGHT,
+                                        shooter.pos[2]] : null);
       if (!origin) return;
       this.spawnTracer(origin, msg.d, 400);
       this.particles.burst('muzzle', [origin[0] + msg.d[0] * 1.6,
@@ -604,7 +730,8 @@
     }
     this.nextFire = now + 60 / Math.max(1, stats.rpm || 240);
     var dir = this.lookDirection();
-    var origin = [this.local.pos[0], this.local.pos[1] + 4.85, this.local.pos[2]];
+    var origin = [this.local.pos[0], this.local.pos[1] + Avatar.EYE_HEIGHT,
+                  this.local.pos[2]];
     this.net.send({ t: 'fire', d: dir, o: origin });
     if (!melee && stats.kind !== 'support') {
       this.ammo[this.slot] = Math.max(0, this.ammo[this.slot] - 1);
@@ -695,9 +822,11 @@
     if (this.keys.sprint) speed *= 0.45;
     var forward = (this.keys.forward ? 1 : 0) - (this.keys.back ? 1 : 0);
     var strafe = (this.keys.right ? 1 : 0) - (this.keys.left ? 1 : 0);
+    // forward is (sin yaw, cos yaw); screen-right is forward x up, which is
+    // (-cos yaw, sin yaw).  Using its negative is what had A and D swapped.
     var sin = Math.sin(local.yaw), cos = Math.cos(local.yaw);
-    var wishX = sin * forward + cos * strafe;
-    var wishZ = cos * forward - sin * strafe;
+    var wishX = sin * forward - cos * strafe;
+    var wishZ = cos * forward + sin * strafe;
     var length = Math.hypot(wishX, wishZ);
     if (length > 0.001) { wishX /= length; wishZ /= length; }
 
@@ -761,12 +890,17 @@
   };
 
   Client.prototype.cameraPosition = function () {
-    var eye = [this.local.pos[0], this.local.pos[1] + 4.85, this.local.pos[2]];
     if (!this.thirdPerson) {
+      // EYE_HEIGHT sits a little above the middle of the head; the chase
+      // camera below deliberately keeps the older, lower pivot.
+      var eye = [this.local.pos[0], this.local.pos[1] + Avatar.EYE_HEIGHT,
+                 this.local.pos[2]];
       var sway = Math.sin(this.bob * 2) * 0.06;
       eye[1] += sway;
       return { eye: eye, yaw: this.local.yaw, pitch: this.local.pitch };
     }
+    var eye = [this.local.pos[0], this.local.pos[1] + Avatar.CHASE_PIVOT,
+               this.local.pos[2]];
     // Classic over-the-shoulder chase camera, pulled in when a wall is close
     // but never so close that it ends up inside the character.
     var dir = this.lookDirection();
@@ -792,7 +926,7 @@
     renderer.resize();
     renderer.beginFrame(dt);
     var camera = this.cameraPosition();
-    renderer.setCamera(camera.eye, camera.yaw, camera.pitch, Settings.fov);
+    renderer.setCamera(camera.eye, camera.yaw, camera.pitch, this.currentFov());
 
     var time = this.time;
     var self = this;
@@ -960,7 +1094,23 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     if (!window.BH || !BH.world) return;
+    // Remember the page the player launched from before anything navigates,
+    // so the pause menu's Quit can put them back on it.
+    try {
+      if (document.referrer) {
+        var ref = new URL(document.referrer);
+        if (ref.origin === location.origin && ref.pathname !== location.pathname) {
+          sessionStorage.setItem('blockhaven.returnTo', ref.pathname + ref.search);
+        }
+      }
+    } catch (e) {}
     window.gameClient = new Client();
+  });
+
+  // A player who leaves the tab entirely (back button, address bar) should not
+  // be left stuck in fullscreen.
+  window.addEventListener('pagehide', function () {
+    if (window.gameClient) window.gameClient.restoreFullscreen();
   });
 
   global.GameClient = Client;

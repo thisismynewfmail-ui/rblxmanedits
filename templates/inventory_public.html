@@ -2,7 +2,8 @@
 <div class="panel">
   <div class="panel-head">
     <span>{{ target.username }}'s inventory</span>
-    <span class="head-links">{{ summary.total }} items &bull; {{ summary.unusual }} Unusual &bull;
+    <span class="head-links">{{ '' if private else str(summary.total) + ' items' }}
+      {{ '' if private else ('&bull; ' + str(summary.unusual) + ' Unusual') }} &bull;
       <a href="/profile/{{ target.username }}">back to profile</a></span>
   </div>
   <div class="panel-body">
@@ -22,7 +23,9 @@
       </div>
       {% endfor %}
     </div>
-    {% if not items %}<p class="muted">This inventory is empty.</p>{% endif %}
+    {% if private %}
+    <p class="muted">{{ target.username }} keeps their inventory private.</p>
+    {% elif not items %}<p class="muted">This inventory is empty.</p>{% endif %}
   </div>
 </div>
 {% include "partials/foot.html" %}

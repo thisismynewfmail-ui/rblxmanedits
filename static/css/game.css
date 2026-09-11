@@ -9,6 +9,7 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
 
 .hud { position: absolute; inset: 0; pointer-events: none; user-select: none; }
 .hud .clickable { pointer-events: auto; }
+.hidden { display: none !important; }
 
 /* ------------------------------------------------------------- crosshair */
 #crosshair { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px;
@@ -160,14 +161,22 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
 }
 .overlay.on { display: flex; }
 .menu {
-  width: 420px; max-width: 92vw; background: #f2f6fa; color: #22303c; border-radius: 6px;
-  border: 2px solid #0d3f6f; box-shadow: 0 12px 40px rgba(0,0,0,.6); overflow: hidden;
+  /* Sized from the viewport in both directions so the whole card always fits:
+     the old fixed height let the body overflow and put a scrollbar across the
+     bottom of the pause menu. */
+  width: min(440px, 94vw); background: #f2f6fa; color: #22303c; border-radius: 6px;
+  border: 2px solid #0d3f6f; box-shadow: 0 12px 40px rgba(0,0,0,.6);
+  display: flex; flex-direction: column; max-height: 92vh; overflow: hidden;
 }
 .menu .mhead {
   background: linear-gradient(#2d7dc4, #14548e); color: #fff; padding: 9px 14px;
   font-weight: bold; font-size: 15px; display: flex; justify-content: space-between;
+  gap: 10px; flex: 0 0 auto;
 }
-.menu .mbody { padding: 14px; max-height: 70vh; overflow-y: auto; }
+.menu .mbody {
+  padding: 14px; flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
+}
 .menu .mbody h3 { margin: 12px 0 6px; font-size: 12px; color: #1b3d5f; }
 .menu button, .menu a.btn {
   display: block; width: 100%; margin: 6px 0; padding: 9px; font-size: 13px; font-weight: bold;
@@ -178,9 +187,12 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
 .menu button.primary { background: linear-gradient(#6fb4ea, #1e6ca8); color: #fff; border-color: #17557f; }
 .menu button.danger { background: linear-gradient(#e0705f, #a0281a); color: #fff; border-color: #7d1d12; }
 .menu .rowline { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
-.menu .rowline label { flex: 0 0 130px; font-size: 11px; font-weight: bold; margin: 0; }
-.menu .rowline input[type=range] { flex: 1 1 auto; }
-.menu .rowline .val { width: 46px; text-align: right; font-size: 11px; }
+.menu .rowline label { flex: 0 0 120px; min-width: 0; font-size: 11px; font-weight: bold; margin: 0; }
+.menu .rowline input[type=range] { flex: 1 1 auto; min-width: 0; width: 100%; }
+.menu .rowline .val { flex: 0 0 46px; text-align: right; font-size: 11px; }
+.menu button, .menu a.btn { max-width: 100%; }
+.menu .mbody table { width: 100%; table-layout: fixed; }
+.menu .mbody td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .menu .keyrow { display: flex; align-items: center; justify-content: space-between;
   padding: 3px 0; border-bottom: 1px dotted #cfdbe5; font-size: 11px; }
 .menu .keyrow button { width: 110px; margin: 0; padding: 3px; font-size: 11px; }
@@ -217,21 +229,62 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
   transform: translate(-14px, -150px); animation: fadeout 1.2s forwards; }
 @keyframes fadeout { to { opacity: 0; } }
 
-/* ------------------------------------------------------------------ vote */
+/* ------------------------------------------------------------------ vote
+   Part of the end-of-round card rather than a floating panel: the card is a
+   modal overlay, so the mouse is free and these buttons can be clicked. */
 #vote {
-  position: absolute; right: 14px; top: 190px; width: 260px; background: rgba(12,18,26,.92);
-  border: 2px solid #ffd95e; border-radius: 5px; padding: 10px; display: none; pointer-events: auto;
+  display: none; margin: 0 14px 14px; padding: 11px 12px;
+  background: rgba(255, 240, 200, .55); border: 2px solid #d9a824; border-radius: 5px;
+  color: #3a2c05; flex: 0 0 auto;
 }
 #vote.on { display: block; }
-#vote h3 { margin: 0 0 4px; font-size: 13px; color: #ffd95e; }
-#vote .count { font-size: 22px; font-weight: bold; text-align: center; margin: 4px 0; }
-#vote .bar { height: 8px; background: rgba(0,0,0,.5); border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
-#vote .bar i { display: block; height: 100%; background: linear-gradient(#7ed07e, #3f9d47); }
-#vote button { width: 48%; padding: 6px; font-family: inherit; font-weight: bold; cursor: pointer;
-  border-radius: 3px; border: 1px solid #555; }
-#vote button.yes { background: #3f9d47; color: #fff; }
-#vote button.no { background: #a0281a; color: #fff; }
-#vote .timer { text-align: center; font-size: 11px; opacity: .85; margin-top: 5px; }
+#vote h3 { margin: 0 0 6px; font-size: 13px; color: #7a5c05; text-align: center; }
+#vote .count { font-size: 24px; font-weight: bold; text-align: center; margin: 2px 0 6px; }
+#vote .bar { height: 9px; background: rgba(0,0,0,.16); border-radius: 5px; overflow: hidden;
+  margin-bottom: 9px; border: 1px solid rgba(0,0,0,.18); }
+#vote .bar i { display: block; height: 100%; background: linear-gradient(#7ed07e, #3f9d47);
+  transition: width .3s; }
+#vote .votebtns { display: flex; gap: 8px; }
+#vote button {
+  flex: 1 1 0; min-width: 0; margin: 0; padding: 9px 6px; font-family: inherit;
+  font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 4px;
+  border: 1px solid rgba(0,0,0,.35); color: #fff;
+}
+#vote button.yes { background: linear-gradient(#5cbb64, #2f8438); }
+#vote button.no { background: linear-gradient(#d06355, #a0281a); }
+#vote button:active { transform: translateY(1px); }
+#vote .timer { text-align: center; font-size: 11px; opacity: .85; margin-top: 7px; }
+#vote-result {
+  margin: 0 14px 14px; padding: 8px 10px; border-radius: 4px; text-align: center;
+  background: rgba(47, 111, 159, .16); border: 1px solid rgba(47, 111, 159, .5);
+  color: #14548e; font-size: 12px; font-weight: bold;
+}
+#vote-result.hidden { display: none; }
+
+/* ------------------------------------------------------------------ scope */
+#scope { position: absolute; inset: 0; display: none; }
+#scope.on { display: block; }
+#scope .ring {
+  position: absolute; left: 50%; top: 50%; width: 78vmin; height: 78vmin;
+  margin: -39vmin 0 0 -39vmin; border-radius: 50%;
+  border: 2px solid rgba(0,0,0,.85);
+  box-shadow: 0 0 0 100vmax rgba(0,0,0,.92), inset 0 0 60px rgba(0,0,0,.75);
+}
+#scope .cross-v, #scope .cross-h { position: absolute; background: rgba(10,10,10,.9); }
+#scope .cross-v { left: 50%; top: 11%; bottom: 11%; width: 1px; margin-left: -0.5px; }
+#scope .cross-h { top: 50%; left: 11%; right: 11%; height: 1px; margin-top: -0.5px; }
+#crosshair.hidden { display: none; }
+
+/* --------------------------------------------------------- focus reminder */
+#focus-hint {
+  position: absolute; left: 50%; top: 62px; transform: translateX(-50%);
+  background: rgba(10,14,20,.86); border: 1px solid rgba(255,217,94,.7);
+  border-radius: 5px; padding: 8px 16px; text-align: center; display: none;
+  animation: toastin .2s ease-out; max-width: 92vw;
+}
+#focus-hint.on { display: block; }
+#focus-hint b { display: block; color: #ffd95e; font-size: 13px; }
+#focus-hint span { display: block; font-size: 11px; opacity: .82; margin-top: 3px; }
 
 /* ------------------------------------------------------------- interaction */
 #prompt {
@@ -263,3 +316,49 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
 #topleft .badge2 { background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.24);
   padding: 2px 7px; border-radius: 3px; margin-right: 4px; display: inline-block; }
 #perf { position: absolute; right: 14px; top: 96px; font-size: 10px; opacity: .55; text-align: right; }
+
+
+/* --------------------------------------------------------- small viewports
+   The HUD is laid out for a desktop window; on a short or narrow one the
+   panels are pulled in so nothing overlaps or runs off the edge. */
+@media (max-height: 720px) {
+  .menu .mbody { padding: 10px 12px; }
+  .menu button, .menu a.btn { padding: 7px; margin: 4px 0; font-size: 12px; }
+  .menu .mhead { padding: 7px 12px; font-size: 14px; }
+  #vote { margin: 0 12px 12px; padding: 9px 10px; }
+  #vote .count { font-size: 20px; margin: 0 0 5px; }
+  #chat-wrap { bottom: 132px; }
+}
+@media (max-width: 1100px) {
+  #killfeed { width: 280px; }
+  #chat-wrap { width: 340px; }
+  #health-wrap { width: 210px; }
+  #hotbar-hud .slot { width: 62px; height: 52px; }
+  #hotbar-hud .slot canvas { width: 46px; height: 46px; }
+  #ammo .mag { font-size: 32px; }
+}
+
+
+/* ---------------------------------------------------------- desktop only
+   The Game View needs pointer lock, a keyboard and a mouse.  Rather than
+   letting a phone load a view it cannot control, the page says so. */
+#mobile-block { display: none; }
+@media (max-width: 860px), (pointer: coarse) and (max-width: 1024px) {
+  #mobile-block {
+    position: fixed; inset: 0; z-index: 100; display: flex;
+    align-items: center; justify-content: center; padding: 20px;
+    background: linear-gradient(#0e3c68, #071d33);
+  }
+  #mobile-block .card {
+    max-width: 420px; text-align: center; background: rgba(10,20,32,.72);
+    border: 1px solid rgba(255,255,255,.25); border-radius: 8px; padding: 22px 20px;
+  }
+  #mobile-block h1 { font-size: 22px; margin: 0 0 10px; }
+  #mobile-block p { font-size: 13px; line-height: 1.6; color: #cfe3f5; margin: 0 0 10px; }
+  #mobile-block .back {
+    display: inline-block; margin: 6px 4px 0; padding: 9px 16px; border-radius: 4px;
+    background: linear-gradient(#6fb4ea, #1e6ca8); color: #fff; font-weight: bold;
+    font-size: 13px; text-decoration: none; border: 1px solid #17557f;
+  }
+  #game-root { display: none; }
+}

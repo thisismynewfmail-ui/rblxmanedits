@@ -1,4 +1,23 @@
 </div>
+{% if user %}
+<div class="dock" id="msg-dock">
+  <div class="dock-panel">
+    <div class="dock-head">
+      <span>Messages</span>
+      <span><a href="/messages/compose">New</a> &middot; <a href="/messages">Inbox</a></span>
+    </div>
+    <div class="dock-body" id="dock-body">
+      <div class="muted tiny" style="padding:12px">Loading...</div>
+    </div>
+    <div class="dock-foot"><a class="btn small block primary" href="/messages/compose">Write a message</a></div>
+  </div>
+  <button class="dock-toggle" id="dock-toggle" type="button" aria-expanded="false">
+    <span>&#9993; Messages</span>
+    <span class="dockbadge hidden" id="dock-badge">0</span>
+    <span class="chev">&#9650;</span>
+  </button>
+</div>
+{% endif %}
 <div class="wrap">
   <div class="footer">
     <a href="/">Home</a> | <a href="/worlds">Worlds</a> | <a href="/market">Market</a> |

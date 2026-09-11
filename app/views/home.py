@@ -4,7 +4,7 @@ from __future__ import annotations
 from ..http import router as R
 from ..http.router import Request
 from ..game import registry as game_registry
-from ..models import avatars, inventory, users, worlds
+from ..models import avatars, events, inventory, users, worlds
 from ..social import feed, follows, friends, posts
 from .base import render, router
 
@@ -16,10 +16,22 @@ def home(req: Request):
         status = game_registry.world_status(world["id"])
         stats = worlds.stats(world["id"])
         world_rows.append({"world": world, "status": status, "stats": stats})
+    spotlight = events.current()
+    if spotlight["id"] == "world_spotlight" and world_rows:
+        # point the world spotlight at whichever world is busiest right now
+        featured = max(world_rows, key=lambda r: (r["status"]["players"],
+                                                  r["stats"]["visits"]))
+        spotlight = dict(spotlight)
+        spotlight["title"] = "World Spotlight: %s" % featured["world"]["name"]
+        spotlight["href"] = "/worlds/%s" % featured["world"]["id"]
+        spotlight["cta"] = "Open %s" % featured["world"]["name"]
     if req.user is None:
         return render(req, "landing.html", worlds=world_rows,
                       site_stats=feed.stats_snapshot(),
                       recent_users=users.recent(10),
+                      spotlight=spotlight,
+                      spotlight_left=events.seconds_left(),
+                      upcoming=events.upcoming(2),
                       showcase=inventory.unusual_showcase(6))
     uid = int(req.user["id"])
     return render(
@@ -36,7 +48,9 @@ def home(req: Request):
         avatar=avatars.descriptor(uid, req.user["username"]),
         showcase=inventory.unusual_showcase(6),
         stats=worlds.player_stats(uid),
-        leaderboard=worlds.leaderboard(None, 8),
+        spotlight=spotlight,
+        spotlight_left=events.seconds_left(),
+        upcoming=events.upcoming(2),
     )
 
 
