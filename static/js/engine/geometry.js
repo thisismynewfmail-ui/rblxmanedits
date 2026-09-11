@@ -336,7 +336,18 @@
       // sizes are applied the bevel comes out roughly uniform in world units
       rbox: Geometry.roundedBox(0.085, 2),                  // near-cubic parts
       rlimb: Geometry.roundedBox([0.133, 0.064, 0.133], 2),  // 1:2:1 arms, legs
-      rhead: Geometry.roundedBox([0.196, 0.214, 0.202], 3),  // the head
+      rhead: Geometry.roundedBox([0.220, 0.235, 0.225], 3),  // the head
+      /* Wide, shallow torso segments, for stacking into a curved body.
+
+         The horizontal radius is deliberately almost nothing.  A rounded box
+         is always narrowest at its top and bottom, so any real x radius makes
+         each segment bulge in the middle, and a stack of them comes out
+         corrugated like a pile of tyres -- which is the opposite of a curve.
+         With the sides left vertical the silhouette comes entirely from the
+         widths of the segments and the way they overlap, and the rounding is
+         spent where it does read as soft: front to back, and on the top and
+         bottom edges. */
+      rtorso: Geometry.roundedBox([0.050, 0.130, 0.170], 3),
       cyl: Geometry.cylinder(18),
       sph: Geometry.sphere(12, 18),
       cone: Geometry.cone(16),

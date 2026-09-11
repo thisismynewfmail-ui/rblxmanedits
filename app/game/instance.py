@@ -440,6 +440,29 @@ class GameInstance:
             self.system_message("%s joined the server." % username)
             return player
 
+    def kick_user(self, user_id: int, reason: str) -> int:
+        """Drop every connection belonging to one account.
+
+        Used when the same player starts a second session: the old one is
+        told why it is going and then has its socket closed, which ends its
+        reader loop and runs the ordinary remove_player teardown (final stats
+        flush included) in the handler's finally block.
+        """
+        with self.lock:
+            doomed = [p for p in self.players.values()
+                      if p.user_id == user_id and p.connected]
+        for player in doomed:
+            try:
+                player.send({"t": "kicked", "reason": reason})
+            except Exception:
+                pass
+            player.connected = False
+            try:
+                player.ws.close()
+            except Exception:
+                pass
+        return len(doomed)
+
     def remove_player(self, pid: int) -> None:
         with self.lock:
             player = self.players.pop(pid, None)

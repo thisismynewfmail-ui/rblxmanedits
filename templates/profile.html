@@ -19,6 +19,13 @@
             <span class="pill">Activity hidden</span>
           {% endif %}
         </div>
+        <!-- Phone visitors are here for the inbox as much as the profile, so
+             the online status is followed straight away by a way into it. -->
+        {% if user %}
+        <a class="btn block primary only-mobile" href="/messages" style="margin-top:8px">
+          &#9993; Messages{% if nav_unread %} <span class="badge alert">{{ nav_unread }}</span>{% endif %}
+        </a>
+        {% endif %}
         <div style="margin-top:8px" class="stack">
           {% if is_self %}
             <a class="btn block primary" href="/profile-editor">&#9998; Edit profile</a>
@@ -139,7 +146,7 @@
                data-slot-label="{{ it.slot_label }}" data-serial="{{ it.serial }}"
                data-tier="{{ it.tier }}" data-effect="{{ it.effect }}"
                data-effect-name="{{ it.effect_name }}" data-rarity="{{ it.rarity }}"
-               data-href="/inventory/{{ profile.username }}">
+               data-href="{{ '/inventory/' + profile.username if show_inventory else '' }}">
             <div class="thumb-wrap">
               <canvas class="thumb item-thumb" width="216" height="216"
                       data-item="{{ it.item_id }}" data-effect="{{ it.effect }}"></canvas>
@@ -234,21 +241,6 @@
     </div>
     {% endif %}
 
-    {% if show_stats %}
-    <div class="panel">
-      <div class="panel-head">Per-world record</div>
-      <div class="panel-body flush">
-        <div class="tablewrap">
-          <table class="grid">
-            <tr><th>World</th><th class="right">K</th><th class="right">D</th></tr>
-            {% for wid, row in stats.worlds.items() %}
-            <tr><td class="tiny">{{ wid }}</td><td class="right">{{ row.kills }}</td><td class="right">{{ row.deaths }}</td></tr>
-            {% endfor %}
-          </table>
-        </div>
-      </div>
-    </div>
-    {% endif %}
   </div>
 </div>
 {% include "partials/foot.html" %}

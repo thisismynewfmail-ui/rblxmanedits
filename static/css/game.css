@@ -160,6 +160,13 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
   backdrop-filter: blur(2px);
 }
 .overlay.on { display: flex; }
+/* While any menu is up the mouse is free, so the cursor has to be visible
+   over the whole viewport -- including the part of it that is the game
+   canvas, which hides the cursor while it holds the pointer lock. */
+.overlay.on, .overlay.on * { cursor: default; }
+.overlay.on button, .overlay.on a, .overlay.on .mbtn,
+.overlay.on input, .overlay.on select { cursor: pointer; }
+.overlay.on input[type=text], .overlay.on input[type=range] { cursor: auto; }
 .menu {
   /* Sized from the viewport in both directions so the whole card always fits:
      the old fixed height let the body overflow and put a scrollbar across the
@@ -362,3 +369,9 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
   }
   #game-root { display: none; }
 }
+
+/* The pause card when the server ended this session (a second window). */
+.kicked-note {
+  margin: 0 0 6px; font-weight: bold; font-size: 13px; color: #8c1c15;
+}
+.kicked-sub { margin: 0 0 12px; font-size: 11px; opacity: .75; }

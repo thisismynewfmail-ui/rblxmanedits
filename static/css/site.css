@@ -487,7 +487,12 @@ canvas { max-width: 100%; }
 .ticker-window { position: relative; overflow: hidden; height: 20px; flex: 1 1 auto; }
 .ticker-track {
   display: inline-flex; white-space: nowrap; will-change: transform;
-  animation: tick 60s linear infinite;
+  /* The duration is re-set from script once the strip has been measured, so
+     the headline moves at a fixed number of pixels per second however much
+     news there is.  A fixed duration here means a busy day scrolls faster
+     than a quiet one, which is exactly when it is hardest to read.  This
+     value is only the fallback for a browser that never runs the script. */
+  animation: tick 90s linear infinite;
 }
 .ticker-track span { padding-right: 2.4em; }
 .ticker-window:hover .ticker-track { animation-play-state: paused; }
@@ -536,6 +541,48 @@ label { display: block; font-weight: bold; margin: 8px 0 3px; color: var(--ink-l
 .field { margin-bottom: 8px; }
 .field input, .field select { width: 100%; }
 .inline-form { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+/* ------------------------------------------------- composer "To" combo box */
+.compose-panel { max-width: 640px; }
+.compose-actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+.combo { position: relative; }
+.combo input { width: 100%; padding-right: 26px; }
+.combo.on input { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.combo-clear {
+  position: absolute; right: 1px; top: 1px; bottom: 1px; width: 24px;
+  border: 0; background: none; cursor: pointer; font-size: 15px; line-height: 1;
+  color: var(--ink-soft); padding: 0;
+}
+.combo-clear:hover { color: var(--link-hover); }
+.combo-list {
+  position: absolute; z-index: 40; left: 0; right: 0; top: 100%;
+  margin: 0; padding: 3px; list-style: none;
+  max-height: 248px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 0 0 4px 4px; box-shadow: 0 8px 20px var(--shadow-lift);
+}
+.combo-opt {
+  display: flex; align-items: center; gap: 8px; padding: 5px 6px;
+  border-radius: 3px; cursor: pointer; min-width: 0;
+}
+.combo-opt:hover, .combo-opt.on { background: var(--sunken); }
+.combo-opt canvas {
+  width: 26px; height: 26px; flex: 0 0 auto; border-radius: 3px;
+  background: var(--panel-alt); border: 1px solid var(--line-soft);
+}
+.combo-name {
+  font-size: 12px; font-weight: bold; color: var(--ink-strong);
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.combo-name b { color: var(--link-hover); }
+.combo-tag {
+  flex: 0 0 auto; font-size: 9px; text-transform: uppercase; letter-spacing: .5px;
+  padding: 1px 5px; border-radius: 8px; color: var(--ink-soft);
+}
+.combo-tag.friend { background: var(--tile-normal); color: var(--ink-strong); }
+.combo-tag.online { color: #2f8f3a; }
+.combo-tag:empty { display: none; }
 
 .btn {
   display: inline-block; font-family: inherit; font-size: 11px; font-weight: bold;
@@ -1141,6 +1188,13 @@ dl.stats.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 @media (max-width: 480px) {
+  /* On a phone the suggestion rows are touch targets, so they get more
+     height and the whole list gets more of the screen. */
+  .combo-opt { padding: 8px 8px; gap: 10px; }
+  .combo-opt canvas { width: 32px; height: 32px; }
+  .combo-name { font-size: 13px; }
+  .combo-list { max-height: 46vh; }
+  .compose-actions .btn { flex: 1 1 auto; text-align: center; }
   .steps { grid-template-columns: minmax(0, 1fr); }
   .itemgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .usercard { width: calc(50% - 4px); }

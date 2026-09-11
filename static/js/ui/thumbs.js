@@ -539,6 +539,17 @@
   Thumbs.paint = paint;
   Thumbs.rescan = observe;
 
+  /* Paint every thumbnail inside a subtree that was just built by script.
+     The lazy IntersectionObserver pass only ever sees what was in the
+     document at load, so anything inserted later (a suggestion list, a
+     dialog) has to ask.  These are small and already on screen, so they are
+     painted straight away rather than observed. */
+  Thumbs.scan = function (root) {
+    (root || document).querySelectorAll(
+      'canvas.item-thumb[data-item], canvas.avatar-thumb[data-user],' +
+      ' canvas.world-shot[data-world]').forEach(paint);
+  };
+
   document.addEventListener('DOMContentLoaded', function () {
     if (typeof Renderer === 'undefined') return;
     Thumbs.loadCatalog().then(function () {

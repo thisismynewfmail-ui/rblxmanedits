@@ -59,6 +59,27 @@
     {% endif %}
 
     <div class="panel">
+      <div class="panel-head">Online now</div>
+      <div class="panel-body flush">
+        <div class="tablewrap">
+          <table class="grid">
+            {% for u in online %}
+            <tr><td><span class="dot on"></span> <a href="/profile/{{ u.username }}">{{ u.username }}</a></td>
+                <td class="right tiny muted">{{ ago(u.last_seen) }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- The inbox is the thing a phone visitor actually came for, so on a
+         small screen it gets a button of its own right under Online now
+         rather than only a line in the drawer. -->
+    <a class="btn block primary only-mobile" href="/messages" style="margin-bottom:10px">
+      &#9993; Messages{% if nav_unread %} <span class="badge alert">{{ nav_unread }}</span>{% endif %}
+    </a>
+
+    <div class="panel">
       <div class="panel-head green">Friends ({{ nav_friends }})</div>
       <div class="panel-body">
         {% if friends_list %}
@@ -77,19 +98,6 @@
       <div class="panel-foot"><a href="/friends">Manage friends</a></div>
     </div>
 
-    <div class="panel">
-      <div class="panel-head">Online now</div>
-      <div class="panel-body flush">
-        <div class="tablewrap">
-          <table class="grid">
-            {% for u in online %}
-            <tr><td><span class="dot on"></span> <a href="/profile/{{ u.username }}">{{ u.username }}</a></td>
-                <td class="right tiny muted">{{ ago(u.last_seen) }}</td></tr>
-            {% endfor %}
-          </table>
-        </div>
-      </div>
-    </div>
   </div>
 
   <div class="col">

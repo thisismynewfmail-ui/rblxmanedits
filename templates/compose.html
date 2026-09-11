@@ -1,16 +1,35 @@
 {% include "partials/head.html" %}
-<div class="panel" style="max-width:640px">
+<div class="panel compose-panel">
   <div class="panel-head">Compose message</div>
   <div class="panel-body">
     {% if error %}<div class="notice bad">{{ error }}</div>{% endif %}
-    <form method="post" action="/messages/compose">
+    <form method="post" action="/messages/compose" id="compose-form">
       <input type="hidden" name="csrf" value="{{ csrf }}">
-      <div class="field"><label>To</label><input type="text" name="to" value="{{ to }}" maxlength="20"></div>
-      <div class="field"><label>Subject</label><input type="text" name="subject" value="{{ subject }}" maxlength="80"></div>
-      <div class="field"><label>Message</label><textarea name="body" rows="8" maxlength="2000">{{ body }}</textarea></div>
-      <button class="btn primary">Send</button>
-      <a class="btn" href="/messages">Cancel</a>
+      <input type="hidden" name="back" value="{{ back }}">
+      <div class="field">
+        <label for="compose-to">To</label>
+        <!-- The combo box is progressive: without script this is an ordinary
+             text input and the form still posts a username. -->
+        <div class="combo" id="to-combo">
+          <input type="text" name="to" id="compose-to" value="{{ to }}" maxlength="20"
+                 autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                 role="combobox" aria-autocomplete="list" aria-expanded="false"
+                 aria-controls="to-list" placeholder="Start typing a player's name">
+          <button type="button" class="combo-clear" id="to-clear" tabindex="-1"
+                  aria-label="Clear">&times;</button>
+          <ul class="combo-list" id="to-list" role="listbox" hidden></ul>
+        </div>
+      </div>
+      <div class="field"><label for="compose-subject">Subject</label>
+        <input type="text" name="subject" id="compose-subject" value="{{ subject }}" maxlength="80"></div>
+      <div class="field"><label for="compose-body">Message</label>
+        <textarea name="body" id="compose-body" rows="8" maxlength="2000">{{ body }}</textarea></div>
+      <div class="compose-actions">
+        <button class="btn primary">Send</button>
+        <a class="btn" href="{{ back }}">Cancel</a>
+      </div>
     </form>
   </div>
 </div>
+{% set page_script = "/static/js/ui/compose.js" %}
 {% include "partials/foot.html" %}

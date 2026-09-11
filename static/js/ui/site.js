@@ -154,6 +154,23 @@
     return Site.dialog(options);
   };
 
+  // ------------------------------------------------------------- ticker
+  /* The headline strip is rendered twice end to end and slid by -50%, so the
+     loop is seamless whatever it contains.  What it cannot do in CSS alone is
+     hold a steady reading speed: a fixed duration means the strip moves
+     faster the more news there is.  Measuring it here and solving for the
+     duration fixes the rate instead of the time. */
+  var TICKER_PX_PER_SECOND = 32;
+
+  function sizeTicker() {
+    var track = document.querySelector('.ticker-track');
+    if (!track) return;
+    var half = track.scrollWidth / 2;
+    if (!half) return;
+    var seconds = Math.max(24, half / TICKER_PX_PER_SECOND);
+    track.style.animationDuration = seconds.toFixed(1) + 's';
+  }
+
   // -------------------------------------------------------------- theme
   var THEME_KEY = 'blockhaven.theme';
   var THEME_COOKIE = 'bh_theme';
@@ -635,6 +652,12 @@
     bindNav();
     bindDock();
     bindPosts();
+    sizeTicker();
+    // web fonts land after first paint and change the measurement
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(sizeTicker).catch(function () {});
+    }
+    window.addEventListener('resize', sizeTicker);
     if (window.BH && BH.user) {
       pollCounts();
       setInterval(pollCounts, 20000);

@@ -1,6 +1,9 @@
 """World browser, world detail pages and the in-browser Game View."""
 from __future__ import annotations
 
+import http.client
+import json
+
 from .. import config, db, security
 from ..game import registry as game_registry
 from ..http import router as R
@@ -81,6 +84,34 @@ def register_world_routes() -> None:
                    name="play_%s" % world_id)
 
 
+def _evict_elsewhere(user_id: int) -> None:
+    """Ask whichever host is holding this player to let go.
+
+    Signed and loopback-only, the same trust model the hosts use to call back
+    into the web server.  Best effort: a host that is restarting or wedged
+    must not stop somebody joining a world, and its player would be dropped
+    by the connection timeout anyway.
+    """
+    current = game_registry.player_world_id(user_id)
+    if not current:
+        return
+    backend = game_registry.backend_for(current)
+    if backend is None:
+        return
+    body = json.dumps({"user_id": user_id,
+                       "reason": "You joined from another window."}).encode()
+    try:
+        conn = http.client.HTTPConnection(backend[0], backend[1], timeout=3)
+        conn.request("POST", "/control/evict", body, {
+            "Content-Type": "application/json",
+            "X-Service-Signature": security.service_signature(body),
+        })
+        conn.getresponse().read()
+        conn.close()
+    except Exception:
+        pass
+
+
 @router.post("/api/game/join")
 @login_required
 def join_ticket(req: Request):
@@ -96,6 +127,12 @@ def join_ticket(req: Request):
     uid = int(req.user["id"])
     if not db.rate_limit("join:%d" % uid, 40, 300):
         return api_error("You are joining servers too quickly.")
+    # One account, one live session.  If this player is already in a world,
+    # pull them out of it before the new connection is made, so a second
+    # browser window cannot leave a ghost standing in the old round.  The
+    # host also evicts duplicates of its own accord, which covers the case
+    # where both windows are joining the same world.
+    _evict_elsewhere(uid)
     avatar = avatars.descriptor(uid, req.user["username"])
     ticket = security.sign({
         "uid": uid,

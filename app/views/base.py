@@ -63,6 +63,12 @@ def site_ticker() -> str:
     for row in inventory.notable_finds(4):
         bits.append("%s now owns the %s %s"
                     % (row["username"], row["rarity"], row["name"]))
+    # New faces are news.  Only accounts from the last week, so the strip
+    # does not keep welcoming the same people forever on a quiet site.
+    fresh = time.time() - 7 * 24 * 3600
+    for row in users.recent(4):
+        if row["created_at"] >= fresh:
+            bits.append("Welcome %s, newly joined" % row["username"])
     for world in worlds.all_worlds():
         status = game_registry.world_status(world["id"])
         if status["players"]:

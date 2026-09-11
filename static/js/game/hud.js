@@ -145,7 +145,10 @@
     if (wrap) wrap.classList.add('on');
     el('chat-log').classList.add('expanded');
     if (input) { input.value = ''; input.focus(); }
-    if (document.pointerLockElement) document.exitPointerLock();
+    // through the client, so the unlock is flagged as ours and does not read
+    // as the player pressing Escape
+    if (this.client && this.client.releasePointer) this.client.releasePointer();
+    else if (document.pointerLockElement) document.exitPointerLock();
   };
 
   HUD.prototype.closeChat = function () {
@@ -319,10 +322,10 @@
     var wantCard = this.voteOpen || this.endCardHold;
     this.show('endcard', !!wantCard);
     if (wantCard && this.client && !this.client.paused) {
-      if (document.pointerLockElement) document.exitPointerLock();
+      if (this.client.releasePointer) this.client.releasePointer();
     } else if (!wantCard && this.client && !this.client.paused &&
-               !this.chatOpen && this.client.grabMouse) {
-      this.client.grabMouse();
+               !this.chatOpen && this.client.resumeGrab) {
+      this.client.resumeGrab();
     }
   };
 

@@ -75,8 +75,13 @@ def total_players() -> int:
     return sum(s["players"] for s in all_status().values())
 
 
-def player_world(user_id: int) -> Optional[str]:
-    from ..models import worlds
+def player_world_id(user_id: int) -> Optional[str]:
+    """The id of the world this player is currently in, or None.
+
+    Note the difference from player_world below, which answers with the
+    world's display name because that is what the profile page prints.  Use
+    this one for anything that has to look the world up again.
+    """
     for world_id in list(_hosts.keys()):
         data = raw(world_id)
         if not data:
@@ -84,9 +89,17 @@ def player_world(user_id: int) -> Optional[str]:
         for inst in data.get("instances", []):
             for player in inst.get("players", []):
                 if int(player.get("user_id", 0)) == int(user_id):
-                    world = worlds.get(world_id)
-                    return world["name"] if world else world_id
+                    return world_id
     return None
+
+
+def player_world(user_id: int) -> Optional[str]:
+    from ..models import worlds
+    world_id = player_world_id(user_id)
+    if world_id is None:
+        return None
+    world = worlds.get(world_id)
+    return world["name"] if world else world_id
 
 
 def players_in(world_id: str) -> List[Dict[str, Any]]:

@@ -19,74 +19,94 @@
   var HEIGHT = 5.4;          // feet to the top of the head, both body types
   var HEAD_TOP = 5.4;
 
-  /* Shared head/neck.  The width is pinned at 1.46 because the tightest
-     brims in the catalogue are 1.56-1.62 across and the skull has to stay
-     inside them; the friendlier proportion therefore comes out of the other
-     two axes.  It is wider than it is tall (1.14:1 rather than the old
-     1.07:1) and a little deeper, which reads as a round face rather than a
-     tall brick, and the top stays pinned to HEAD_TOP so every hat anchor,
-     the eye height and the hitbox are all untouched.  The neck is shorter
-     and thicker so the head sits down on the shoulders instead of being
-     served up on a post -- a short neck is most of what makes a character
-     read as cute. */
+  /* Shared head/neck.
+
+     Narrower and shallower than it was (1.46 x 1.28 x 1.40 -> 1.36 x 1.22 x
+     1.26) with a much larger corner radius, so it stops jutting out past the
+     jaw and past every brim.  The top is still pinned to HEAD_TOP, so the hat
+     anchor, the eye height and the hitbox are all untouched, and because the
+     skull got smaller while the brims did not, every hat now encloses it with
+     more room than before rather than less.  The face decal maps 0..1 across
+     the front face, so it simply scales with the head. */
   var HEAD = {
-    size: [1.46, 1.28, 1.40],
-    centre: [0, 4.76, 0],
-    neck: { size: [0.70, 0.30, 0.66], y: 4.03 }
+    size: [1.36, 1.22, 1.26],
+    centre: [0, 4.79, 0],
+    neck: { size: [0.66, 0.30, 0.62], y: 4.08 }
   };
 
-  /* The two builds differ by silhouette, not by parts: same segments, same
-     anchors, different measurements.  The male reads as a near-uniform block
-     (the waist is only a hair narrower than the chest); the female has
-     narrower shoulders, a real waist, hips back out to shoulder width and
-     slimmer, slightly longer limbs.  Because the head is shared and
-     unchanged, the smaller female body also reads as a larger head, which is
-     where the softer, cuter proportion comes from -- no extra geometry, and
-     nothing for a hat or a face to trip over. */
+  /* The two builds differ by silhouette, not by parts: same segment list,
+     same anchors, different measurements and a different bake for the torso.
+
+     MALE is the slimmer build that used to be the female one -- narrow
+     shoulders, a real waist and softened limbs -- with two changes that keep
+     the two builds telling apart: the chest segment no longer stands proud of
+     the ribs (that depth step was a bust), and the hips come in to just
+     under shoulder width so the silhouette is straight rather than pear
+     shaped.
+
+     FEMALE is a genuine hourglass: 1.48 across the chest, 1.12 at the waist
+     and 1.78 at the hips (a 0.63 waist-to-hip ratio), a bust segment that
+     stands 0.16 proud of the ribs in profile, a higher hip line for a longer
+     leg, and the rounder "rtorso" bake so the cross-section is an oval
+     instead of a brick.  Both builds still hang every part off the same
+     anchors, so one hat, face, shirt, pair of trousers or back item fits
+     either one with no per-build variant. */
   var BODIES = {
     male: {
       id: 'male',
       label: 'Male',
       // Stacked torso segments, top first; "decal" marks the one a shirt
       // graphic is printed on.  Consecutive segments overlap by more than
-      // their two bevels put together (here 0.32 against 0.20), because
-      // rounded boxes that merely touch leave a groove between them and the
-      // torso reads as a stack of trays rather than one body.
+      // their two bevels put together, because rounded boxes that merely
+      // touch leave a groove between them and the torso reads as a stack of
+      // trays rather than one body.
       torso: [
-        { size: [2.00, 1.39, 1.06], y: 3.315, decal: true },
-        { size: [1.94, 0.94, 1.02], y: 2.47 }
+        { size: [1.58, 0.82, 0.96], y: 3.66 },
+        { size: [1.56, 0.84, 0.94], y: 3.06, decal: true },
+        { size: [1.44, 0.72, 0.90], y: 2.50 }
       ],
-      chest: { size: [2.00, 1.30, 1.06], y: 3.36 },
-      waistLine: 2.00,
-      hips: { size: [1.96, 0.38, 1.06], y: 2.06 },
+      chest: { size: [1.58, 1.30, 0.96], y: 3.38 },
+      waistLine: 2.16,
+      hips: { size: [1.56, 0.54, 0.96], y: 2.12 },
       // narrow across, deeper front to back: a rectangle in section, not a
-      // post.  x moves in with the half-width so the inner face still
-      // meets the torso at the same place and the shoulder joint is sound.
-      arm: { size: [0.82, 2.02, 0.96], x: 1.36, pivotY: 3.98 },
-      leg: { size: [1.00, 2.00, 1.02], x: 0.52, pivotY: 2.00 },
-      foot: { size: [1.06, 0.28, 1.24], z: 0.10 },
-      backAnchor: [0, 3.02, -0.54]
+      // post.  x is set so the inner face overlaps the torso by 0.04.
+      arm: { size: [0.66, 2.12, 0.80], x: 1.08, pivotY: 4.03 },
+      leg: { size: [0.78, 2.12, 0.88], x: 0.41, pivotY: 2.12 },
+      foot: { size: [0.86, 0.24, 1.06], z: 0.10 },
+      backAnchor: [0, 3.06, -0.46]
     },
     female: {
       id: 'female',
       label: 'Female',
-      // Three segments of two widths.  The top two share a width so there is
-      // no step across the front, but the upper one is deeper -- which reads
-      // as a chest in profile and leaves the front flat for a shirt graphic.
-      // Each pair overlaps by 0.20 against a combined bevel of 0.13, so the
-      // three read as one tapering body instead of three slabs.
+      // Four segments, listed bottom to top.  Across: 1.66 at the hip flare
+      // -> 1.10 waist -> 1.28 -> 1.46 chest, a 0.66 waist-to-hip ratio, and
+      // the waist is the tall segment (0.66) so the narrow part of the
+      // silhouette is a long line rather than a nick.  Front to back the
+      // chest is 1.10 against the 0.82 waist, so it stands more than a
+      // quarter of a unit proud in profile while its front stays square for
+      // a shirt graphic.  Every pair overlaps past its combined bevel, so
+      // the four read as one continuous body rather than a stack of discs.
+      // Narrower across the shoulders than the male (1.46 against 1.58) and
+      // wider at the hip, which is the whole difference in one line.
       torso: [
-        { size: [1.56, 0.73, 1.00], y: 3.645 },
-        { size: [1.56, 0.82, 0.90], y: 3.07, decal: true },
-        { size: [1.38, 0.70, 0.84], y: 2.51 }
+        { size: [1.66, 0.62, 1.02], y: 2.62, t: 'rtorso' },
+        { size: [1.10, 0.66, 0.82], y: 3.06, t: 'rtorso' },
+        { size: [1.28, 0.52, 0.92], y: 3.44, t: 'rtorso' },
+        { size: [1.46, 0.60, 1.10], y: 3.78, t: 'rtorso', decal: true }
       ],
-      chest: { size: [1.56, 1.26, 0.95], y: 3.38 },
-      waistLine: 2.16,
-      hips: { size: [1.70, 0.54, 0.98], y: 2.12 },
-      arm: { size: [0.64, 2.12, 0.78], x: 1.07, pivotY: 3.99 },
-      leg: { size: [0.76, 2.12, 0.86], x: 0.40, pivotY: 2.12 },
-      foot: { size: [0.82, 0.24, 1.04], z: 0.10 },
-      backAnchor: [0, 3.06, -0.46]
+      chest: { size: [1.46, 1.18, 1.10], y: 3.56 },
+      waistLine: 3.06,
+      // a pelvis block rather than a slab: it is the trouser colour, so
+      // anything taller reads as shorts
+      hips: { size: [1.60, 0.44, 1.00], y: 2.34, t: 'rtorso' },
+      // slimmer and shorter than the male arm, set in tight to the chest.
+      // The gap that opens beside the waist is the hourglass, not a mistake.
+      arm: { size: [0.58, 2.06, 0.74], x: 0.95, pivotY: 4.02 },
+      // the hip line sits 0.18 higher than the male one, which is where the
+      // longer, more adult leg comes from without changing the total height
+      leg: { size: [0.72, 2.30, 0.84], x: 0.39, pivotY: 2.30 },
+      foot: { size: [0.78, 0.24, 1.00], z: 0.10 },
+      backAnchor: [0, 3.40, -0.54]
     }
   };
 
@@ -224,13 +244,17 @@
     var torsoDecal = null;
     if (shirtData.decal) torsoDecal = Textures.decal(shirtData.decal);
     body.torso.forEach(function (segment) {
+      // a segment may name its own bake -- the female torso uses the rounder
+      // "rtorso" so its cross-section is an oval rather than a brick
       place([0, segment.y, 0], segment.size.slice(), torsoColour, {
-        rx: lean, decSlot: segment.decal ? torsoDecal : null, k: 'torso'
+        t: segment.t, rx: lean,
+        decSlot: segment.decal ? torsoDecal : null, k: 'torso'
       });
     });
     // hips read as part of the lower body, so they take the trousers colour
     var hipColour = pantsData.legs || colourOf(descriptor, 'left_leg', '#a4bd47');
-    place([0, body.hips.y, 0], body.hips.size.slice(), hipColour, { k: 'hips' });
+    place([0, body.hips.y, 0], body.hips.size.slice(), hipColour,
+          { t: body.hips.t, k: 'hips' });
 
     var lowest = body.torso[body.torso.length - 1];
     if (shirtData.stripe) {

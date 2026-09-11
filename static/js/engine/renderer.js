@@ -363,8 +363,11 @@
     this.staticBatches = {};
     this.transparent = {};
     var self = this;
-    ['box', 'rbox', 'rlimb', 'rhead', 'cyl', 'sph', 'cone', 'wedge',
-     'torus'].forEach(function (name) {
+    // Every mesh the geometry module registers gets its four batches, so a
+    // new primitive is one entry in Geometry.build() and nothing else.  The
+    // full-screen quad is drawn by hand and never instanced.
+    Object.keys(this.meshes).forEach(function (name) {
+      if (name === 'quad') return;
       self.dynamic[name] = new Batch(gl, self.meshes[name], self.program);
       self.dynamicGlass[name] = new Batch(gl, self.meshes[name], self.program);
       self.staticBatches[name] = new Batch(gl, self.meshes[name], self.program);

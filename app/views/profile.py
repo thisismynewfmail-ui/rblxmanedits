@@ -33,6 +33,10 @@ def profile(req: Request, username: str = ""):
     show_online = visible("online")
     playing = game_registry.player_world(pid) if show_server else ""
 
+    # Pinned items are deliberately NOT behind the inventory privacy setting.
+    # Pinning is the act of putting three things on show; hiding the rest of
+    # the collection is a separate decision, and a locked inventory should not
+    # silently blank the shelf the owner chose to display.
     pinned = [by_inv[i] for i in users.pinned_of(profile_user) if i in by_inv]
     pinned_ids = {int(row["inv_id"]) for row in pinned}
     # everything else goes in the smaller strip under Statistics

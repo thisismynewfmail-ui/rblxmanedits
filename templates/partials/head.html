@@ -78,9 +78,9 @@ window.BH = {
     </form>
     <a href="/" class="{{ 'on' if path == '/' else '' }}">Home</a>
     {% if user %}
-    <a href="/users" class="{{ 'on' if path == '/users' else '' }}">People</a>
-    <a href="/messages" class="{{ 'on' if path.startswith('/messages') else '' }}">Messages{% if nav_unread %} <span class="badge alert">{{ nav_unread }}</span>{% endif %}</a>
     <a href="/friends" class="{{ 'on' if path == '/friends' else '' }}">Friends{% if nav_requests %} <span class="badge">{{ nav_requests }}</span>{% endif %}</a>
+    <a href="/messages" class="{{ 'on' if path.startswith('/messages') else '' }}">Messages{% if nav_unread %} <span class="badge alert">{{ nav_unread }}</span>{% endif %}</a>
+    <a href="/users" class="{{ 'on' if path == '/users' else '' }}">People</a>
     <a href="/avatar" class="{{ 'on' if path == '/avatar' else '' }}">Avatar</a>
     <a href="/inventory" class="{{ 'on' if path.startswith('/inventory') else '' }}">Inventory</a>
     <a href="/worlds" class="{{ 'on' if path.startswith('/worlds') else '' }}">Worlds</a>

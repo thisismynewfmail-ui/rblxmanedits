@@ -43,6 +43,11 @@
     this.thirdPerson = false;
     this.scoped = false;
     this.mouseGrabbed = false;
+    // Set while we are the ones releasing the pointer, so the unlock that
+    // follows is not mistaken for the player pressing Escape.
+    this.releasingPointer = false;
+    this.lastBlurAt = -1e9;
+    this.regrabTimer = 0;
     this.paused = false;
     this.keys = {};
     this.time = 0;
@@ -90,21 +95,50 @@
       // Fullscreen needs a user gesture, so it is requested on the same click
       // that grabs the mouse rather than on load.
       self.enterFullscreen();
-      self.grabMouse();
+      // resumeGrab rather than grabMouse: this click is often the one right
+      // after an Escape, while the browser is still refusing to re-lock.
+      self.resumeGrab();
       self.audio.resume();
     });
 
     /* Losing the pointer lock is not the same thing as wanting the game
        paused.  Alt-tabbing, hitting the Windows key or clicking another
        monitor releases the mouse cleanly and the round keeps running; only
-       Esc opens the pause menu.  The overlay below tells the player how to
-       get the mouse back. */
+       Esc opens the pause menu.  The overlay tells the player how to get the
+       mouse back.
+
+       The catch is that a browser does NOT deliver the Escape keydown that
+       exits pointer lock -- it swallows it -- so the keydown handler below
+       never sees the first press and the player has to hit Esc twice.  This
+       unlock is therefore the only signal that Escape was pressed, and it is
+       told apart from the other three cases by what else happened: we set a
+       flag when we release the pointer ourselves, and a focus loss shows up
+       as a blur or as the document no longer holding focus. */
     document.addEventListener('pointerlockchange', function () {
       var locked = document.pointerLockElement === canvas;
       canvas.classList.toggle('freelook', !locked);
       self.mouseGrabbed = locked;
-      if (!locked) { self.firing = false; self.keys = {}; }
-      if (!self.paused && !self.hud.chatOpen) self.hud.showFocusHint(!locked);
+      if (locked) {
+        self.releasingPointer = false;
+        self.hud.showFocusHint(false);
+        return;
+      }
+      self.firing = false;
+      self.keys = {};
+      var weReleased = self.releasingPointer;
+      self.releasingPointer = false;
+      var lostFocus = !document.hasFocus() ||
+                      (performance.now() - self.lastBlurAt) < 400;
+      if (!weReleased && !lostFocus && !self.paused && !self.hud.chatOpen) {
+        self.setPaused(true);
+        return;
+      }
+      if (!self.paused && !self.hud.chatOpen) self.hud.showFocusHint(true);
+    });
+
+    // Alt-Tab, the Windows key and a click on another window all blur first.
+    window.addEventListener('blur', function () {
+      self.lastBlurAt = performance.now();
     });
 
     document.addEventListener('mousemove', function (event) {
@@ -154,7 +188,7 @@
       var action = Settings.actionFor(event.code);
       if (event.code === 'Escape') {
         event.preventDefault();
-        self.setPaused(!self.paused);
+        self.escape();
         return;
       }
       if (self.paused) return;
@@ -202,31 +236,107 @@
     if (text) this.net.send({ t: 'chat', m: text, team: this.hud.chatTeam });
     input.value = '';
     this.hud.closeChat();
-    if (!this.paused) this.canvas.requestPointerLock();
+    if (!this.paused) this.resumeGrab();
   };
 
   Client.prototype.grabMouse = function () {
     if (document.pointerLockElement === this.canvas) return;
-    var request = this.canvas.requestPointerLock({ unadjustedMovement: true });
+    var canvas = this.canvas;
+    var request;
+    try {
+      request = canvas.requestPointerLock({ unadjustedMovement: true });
+    } catch (e) { request = null; }
     // unadjustedMovement is only supported on some platforms; the promise
     // form rejects there, so fall back to a plain lock.
     if (request && typeof request.catch === 'function') {
-      var canvas = this.canvas;
-      request.catch(function () {
-        try { canvas.requestPointerLock(); } catch (e) {}
+      return request.catch(function () {
+        return canvas.requestPointerLock();
       });
     }
+    return null;
+  };
+
+  /* Take the mouse back after a menu closes.
+
+     A browser refuses requestPointerLock for about a second after the user
+     released it with Escape -- a deliberate anti-trap measure -- so the
+     obvious "grab it again on resume" fails silently and leaves the player
+     with a free cursor floating over a running game.  This tries once, and
+     if that is refused waits out the cool-off and tries again; only if that
+     also fails does it fall back to asking for a click. */
+  Client.prototype.resumeGrab = function () {
+    var self = this;
+    if (this.regrabTimer) { clearTimeout(this.regrabTimer); this.regrabTimer = 0; }
+
+    function attempt(retry) {
+      if (self.paused || self.hud.chatOpen) return;
+      var promise = self.grabMouse();
+      if (!promise || typeof promise.then !== 'function') {
+        // no promise form: check after a tick whether it actually took
+        self.regrabTimer = setTimeout(function () {
+          self.regrabTimer = 0;
+          if (self.mouseGrabbed || self.paused) return;
+          if (retry) attempt(false); else self.hud.showFocusHint(true);
+        }, retry ? 1400 : 250);
+        return;
+      }
+      promise.then(function () {
+        // a resolved promise is not proof the lock took (some builds resolve
+        // and then never fire pointerlockchange), so trust the flag
+        if (self.mouseGrabbed) self.hud.showFocusHint(false);
+      }).catch(function () {
+        if (!retry) { self.hud.showFocusHint(true); return; }
+        self.regrabTimer = setTimeout(function () {
+          self.regrabTimer = 0;
+          attempt(false);
+        }, 1400);
+      });
+    }
+    attempt(true);
+  };
+
+  Client.prototype.releasePointer = function () {
+    if (document.pointerLockElement) {
+      this.releasingPointer = true;
+      document.exitPointerLock();
+    }
+  };
+
+  /* What Escape does depends on what is on screen.
+
+     Inside the pause menu it steps back out of whichever panel is open
+     rather than jumping straight to the game, which is what makes Escape
+     feel like "back" instead of a toggle with a memory.  Note that this only
+     runs for presses the browser actually delivers: the press that exits
+     pointer lock is swallowed, and is handled by the pointerlockchange
+     listener instead. */
+  Client.prototype.escape = function () {
+    if (this.hud.chatOpen) { this.hud.closeChat(); this.resumeGrab(); return; }
+    if (this.paused) {
+      var settings = document.getElementById('settings');
+      var helpbox = document.getElementById('helpbox');
+      if (settings && settings.classList.contains('on')) {
+        this.hud.show('settings', false); this.hud.show('pause', true); return;
+      }
+      if (helpbox && helpbox.classList.contains('on')) {
+        this.hud.show('helpbox', false); this.hud.show('pause', true); return;
+      }
+      this.setPaused(false);
+      return;
+    }
+    this.setPaused(true);
   };
 
   Client.prototype.setPaused = function (value) {
     this.paused = value;
     this.hud.show('pause', value);
+    if (this.regrabTimer) { clearTimeout(this.regrabTimer); this.regrabTimer = 0; }
     if (!value) {
       this.hud.show('settings', false);
       this.hud.show('helpbox', false);
-      if (!this.hud.chatOpen) this.grabMouse();
-    } else if (document.pointerLockElement) {
-      document.exitPointerLock();
+      if (!this.hud.chatOpen) this.resumeGrab();
+    } else {
+      this.releasePointer();
     }
     if (value) {
       this.hud.showFocusHint(false);
@@ -348,6 +458,36 @@
     var net = this.net;
 
     net.on('welcome', function (msg) { self.onWelcome(msg); });
+    /* The server dropped this session -- almost always because the same
+       account started playing in another window.  Say so plainly and stop
+       reconnecting, rather than letting the socket close look like a network
+       problem and have the two windows fight over the slot. */
+    net.on('kicked', function (msg) {
+      self.kicked = true;
+      // close() marks the socket as closed by us, so the "Disconnected from
+      // the game host" overlay does not also appear over this
+      if (self.net) self.net.close();
+      self.setPaused(true);
+      var title = document.querySelector('#pause .mhead span');
+      if (title) title.textContent = 'Session ended';
+      var body = document.querySelector('#pause .mbody');
+      if (body && !body.querySelector('.kicked-note')) {
+        var note = document.createElement('p');
+        note.className = 'kicked-note';
+        note.textContent = msg.reason || 'This session was ended.';
+        var sub = document.createElement('p');
+        sub.className = 'kicked-sub';
+        sub.textContent = 'Only one window at a time can be in a world.';
+        body.insertBefore(sub, body.firstChild);
+        body.insertBefore(note, body.firstChild);
+      }
+      // everything except Quit would try to rejoin a socket that is gone
+      ['btn-resume', 'btn-settings', 'btn-thirdperson', 'btn-help']
+        .forEach(function (id) {
+          var node = document.getElementById(id);
+          if (node) node.style.display = 'none';
+        });
+    });
     net.on('join', function (msg) {
       self.addPlayer(msg.player);
       self.hud.toast(msg.player.name + ' joined');

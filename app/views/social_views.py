@@ -44,25 +44,91 @@ def inbox(req: Request):
                   unread=messages.unread_count(uid))
 
 
+def _compose_return(req: Request, supplied: str = "") -> str:
+    """Where "send" and "cancel" should land.
+
+    Composing is almost always an interruption -- you were reading a profile,
+    or the inbox, or a thread -- so the useful destination is wherever the
+    writer came from rather than the inbox every time.  The candidate is taken
+    from the form, then the query string, then the Referer, and it has to be a
+    path on this site that is not the composer itself; anything else falls
+    back to the inbox.
+    """
+    for candidate in (supplied, req.query.get("back", ""),
+                      req.headers.get("referer", "")):
+        candidate = (candidate or "").strip()
+        if not candidate:
+            continue
+        if candidate.startswith("http"):
+            # keep only the path of a same-origin referer
+            rest = candidate.split("//", 1)[-1]
+            slash = rest.find("/")
+            candidate = rest[slash:] if slash >= 0 else "/"
+        if (candidate.startswith("/") and not candidate.startswith("//")
+                and not candidate.startswith("/messages/compose")):
+            return candidate
+    return "/messages"
+
+
 @router.get("/messages/compose")
 @login_required
 def compose(req: Request):
     return render(req, "compose.html", to=req.query.get("to", ""),
-                  subject=req.query.get("subject", ""), body="", error="")
+                  subject=req.query.get("subject", ""), body="", error="",
+                  back=_compose_return(req))
 
 
 @router.post("/messages/compose")
 @login_required
 def compose_post(req: Request):
     form = req.data()
+    back = _compose_return(req, str(form.get("back", "")))
     try:
         messages.send(int(req.user["id"]), str(form.get("to", "")),
                       str(form.get("subject", "")), str(form.get("body", "")))
     except messages.MessageError as exc:
         return render(req, "compose.html", to=str(form.get("to", "")),
                       subject=str(form.get("subject", "")),
-                      body=str(form.get("body", "")), error=str(exc))
-    return flash_redirect("/messages", "Message sent.")
+                      body=str(form.get("body", "")), error=str(exc),
+                      back=back)
+    return flash_redirect(back, "Message sent.")
+
+
+@router.get("/api/users/suggest")
+@login_required
+def suggest_users(req: Request):
+    """Name completions for the composer's To box.
+
+    Friends first and always -- they are who you actually write to -- then
+    anyone else whose name matches, so a new correspondent is still findable.
+    An empty term returns the friends list, which makes the box useful before
+    a single key is pressed.
+    """
+    term = (req.query.get("q", "") or "").strip().lower()
+    uid = int(req.user["id"])
+    seen = {req.user["username"].lower()}
+    out = []
+
+    def take(rows, is_friend):
+        for row in rows:
+            name = str(row["username"])
+            if name.lower() in seen:
+                continue
+            if term and term not in name.lower():
+                continue
+            seen.add(name.lower())
+            out.append({"username": name, "friend": is_friend,
+                        "online": users.is_online(row)})
+            if len(out) >= 8:
+                return True
+        return False
+
+    if not take(friends.list_friends(uid, 100), True):
+        # users.search with an empty term is "everyone, most recently seen
+        # first", which is the right second list both before and after the
+        # writer starts typing.
+        take(users.search(term, 60), False)
+    return api_ok(users=out, term=term)
 
 
 @router.get("/messages/<message_id:int>")

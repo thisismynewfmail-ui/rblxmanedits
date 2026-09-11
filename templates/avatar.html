@@ -14,8 +14,18 @@ put on a hat, then set up the five hotbar slots you take into a world.</div>
         </div>
         <div class="spread" style="margin-top:8px">
           <button class="btn small" id="spin-toggle">Pause spin</button>
-          <a class="btn small" href="/profile/{{ user.username }}">View profile</a>
+          <a class="btn small" href="/inventory">My inventory</a>
         </div>
+        <!-- Every change in this editor is already saved as it is made, so
+             this is a way out rather than a commit.  On a first visit it is
+             the end of the welcome flow and says so; afterwards it is the
+             plain "done" button.  block makes it full width at every size. -->
+        <a class="btn block primary big" id="avatar-done"
+           href="/profile/{{ user.username }}">
+          {% if welcome %}&#10003; Finish and view profile{% else %}Apply and view profile{% endif %}
+        </a>
+        <p class="tiny muted center" style="margin-top:6px">
+          Every change here saves as you make it.</p>
       </div>
     </div>
 

@@ -129,6 +129,14 @@ class GameHost:
             if delay > 0:
                 time.sleep(delay)
 
+    def evict_user(self, user_id: int, reason: str) -> int:
+        """Drop this account from every instance this host is running."""
+        if user_id <= 0:
+            return 0
+        with self.lock:
+            instances = list(self.instances)
+        return sum(i.kick_user(user_id, reason) for i in instances)
+
     # -------------------------------------------------------------- reports
     def report_visit(self, instance: GameInstance, player) -> None:
         self.queue_report({"kind": "visit", "world": self.world_id,
@@ -203,6 +211,12 @@ class GameHost:
             sock.close()
             return
         if headers.get("upgrade", "").lower() != "websocket":
+            # Not a websocket: the only other thing this port answers is the
+            # loopback control channel the web server uses to pull a player
+            # out of a world when they start a session somewhere else.
+            if method == "POST" and urlparse(target).path == "/control/evict":
+                self.handle_control(sock, rfile, headers, address)
+                return
             try:
                 sock.sendall(b"HTTP/1.1 400 Bad Request\r\n"
                              b"Content-Length: 0\r\n\r\n")
@@ -231,6 +245,12 @@ class GameHost:
         except ValueError:
             prefer = None
         instance = self.pick_instance(prefer)
+        # One account, one live connection.  A second window joining the same
+        # world pulls the first out before it is added, so the two never share
+        # a round; a second window joining a *different* world is handled by
+        # the web server calling /control/evict on this host first.
+        self.evict_user(int(ticket.get("uid", 0)),
+                        "You joined from another window.")
         player = instance.add_player(
             int(ticket.get("uid", 0)), str(ticket.get("name", "Player")),
             ticket.get("avatar") or {}, ws, bool(ticket.get("admin")))
@@ -260,6 +280,46 @@ class GameHost:
             self.connections -= 1
             instance.remove_player(player.pid)
             ws.close()
+
+    def handle_control(self, sock, rfile, headers, address) -> None:
+        """Answer a signed loopback control request.
+
+        Same trust model as the heartbeat in the other direction: loopback
+        only, and an HMAC over the raw body with the shared server secret, so
+        nothing reachable from the network can order players out of a game.
+        """
+        def reply(status: str, payload: Dict[str, Any]) -> None:
+            body = json.dumps(payload).encode()
+            try:
+                sock.sendall(("HTTP/1.1 %s\r\nContent-Type: application/json\r\n"
+                              "Content-Length: %d\r\nConnection: close\r\n\r\n"
+                              % (status, len(body))).encode() + body)
+            except Exception:
+                pass
+            finally:
+                sock.close()
+
+        host_ip = address[0] if address else ""
+        if host_ip not in ("127.0.0.1", "::1", "localhost"):
+            reply("403 Forbidden", {"ok": False})
+            return
+        try:
+            length = int(headers.get("content-length", "0") or 0)
+        except ValueError:
+            length = 0
+        body = rfile.read(length) if 0 < length <= 65536 else b""
+        if not security.check_service_signature(
+                body, headers.get("x-service-signature", "")):
+            reply("403 Forbidden", {"ok": False, "error": "bad signature"})
+            return
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except Exception:
+            reply("400 Bad Request", {"ok": False, "error": "bad json"})
+            return
+        dropped = self.evict_user(int(payload.get("user_id", 0) or 0),
+                                  str(payload.get("reason", "Session ended.")))
+        reply("200 OK", {"ok": True, "dropped": dropped})
 
     def serve(self) -> None:
         host = self
