@@ -342,10 +342,19 @@ HATS: List[Dict[str, Any]] = [
          "mat": "neon"},
     ], "Certified for vacuum, lava and awkward silences.", "rare", 19),
 
+    # The reflective band is not a ring slipped over the cone -- that is what
+    # made it read as a floating doughnut.  It is a second cone sharing the
+    # first one's apex, so its surface *is* the cone's surface, truncated at
+    # the height the band starts.  A third cone, sharing the apex again, puts
+    # the orange back on above the band.  Each shell has a hair more slope
+    # than the one inside it (0.5192 -> 0.5294 -> 0.5382), which is what keeps
+    # them strictly nested instead of z-fighting: the step in the silhouette
+    # is under 0.008 units on a hat 1.35 across.
     _hat("hat_traffic_cone", "Traffic Cone", 90, [
         {"t": "cone", "p": [0, 0.62, 0], "s": [1.35, 1.3, 1.35], "c": "#e2621b"},
         {"t": "box", "p": [0, 0.05, 0], "s": [1.7, 0.12, 1.7], "c": "#e2621b"},
-        {"t": "cyl", "p": [0, 0.62, 0], "s": [1.02, 0.2, 1.02], "c": "#f2f3f3"},
+        {"t": "cone", "p": [0, 0.845, 0], "s": [0.9, 0.85, 0.9], "c": "#f2f3f3"},
+        {"t": "cone", "p": [0, 0.995, 0], "s": [0.592, 0.55, 0.592], "c": "#e2621b"},
     ], "Borrowed. Definitely borrowed.", "common", 20),
 ]
 

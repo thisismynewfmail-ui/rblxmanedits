@@ -336,7 +336,7 @@
       // sizes are applied the bevel comes out roughly uniform in world units
       rbox: Geometry.roundedBox(0.085, 2),                  // near-cubic parts
       rlimb: Geometry.roundedBox([0.133, 0.064, 0.133], 2),  // 1:2:1 arms, legs
-      rhead: Geometry.roundedBox([0.178, 0.191, 0.188], 3),  // the head
+      rhead: Geometry.roundedBox([0.196, 0.214, 0.202], 3),  // the head
       cyl: Geometry.cylinder(18),
       sph: Geometry.sphere(12, 18),
       cone: Geometry.cone(16),

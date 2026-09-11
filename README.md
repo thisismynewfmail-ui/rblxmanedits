@@ -227,9 +227,12 @@ plus `face`, `hat`, `shirt`, `pants` and `back` cosmetic slots and five
 market thumbnails and the game itself, so anything added to the catalogue shows
 up everywhere at once.
 
-The rig is built from rounded boxes rather than hard cubes — a neck, a tapered
-torso, softened limbs and feet — so a bare default character has a silhouette
-instead of reading as a stack of blocks.
+The rig is built from rounded boxes rather than hard cubes — a short neck, a
+tapered torso, softened limbs and feet — so a bare default character has a
+silhouette instead of reading as a stack of blocks. The torso segments overlap
+by more than their own bevels, which is what stops the joins showing as
+grooves; the arms are rectangular in section rather than square posts; and the
+head is wider than it is tall, sat down on the shoulders.
 
 **Two body types** ship, `male` and `female`. They differ only from the neck
 down: the female build has narrower shoulders, a cinched waist, flared hips and
@@ -242,9 +245,16 @@ Switching build in the avatar editor never costs you an outfit.
 
 A dark theme ships alongside the light one. It is a second hand-built palette
 rather than an inversion — the chrome keeps its bevels and gradient headers,
-lit from a night sky instead of a white one. The choice is stored on the
-account as well as in the browser, so a phone and a desktop signed into the
-same account agree. `auto` follows the operating system.
+lit from a night sky instead of a white one.
+
+The choice is remembered in three independent places: on the account (so a
+phone and a desktop signed in together agree), in a cookie (so the server can
+stamp the right theme onto the first byte of HTML — no white flash — and so a
+signed-out visitor keeps their choice) and in `localStorage` (so it survives a
+browser that refuses cookies). Losing any one of them does not lose the
+setting, and none of them lives in the server's memory, so restarting the
+process changes nothing. `auto` follows the operating system, and choosing it
+clears the cookie rather than pinning the browser to a stale choice.
 
 The profile editor (`/profile-editor`) carries the description, three **pinned
 items** that sit at the top of the profile, and per-field privacy: who can see

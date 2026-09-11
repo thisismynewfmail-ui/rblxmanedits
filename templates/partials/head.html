@@ -15,12 +15,15 @@ window.BH = {
   theme: "{{ theme }}"
 };
 /* Applied before first paint so a dark-theme reload never flashes white.
-   The account's stored choice wins; a signed-out browser falls back to the
-   last choice made on this device. */
+   BH.theme is already the server's answer -- the account's stored choice if
+   it has one, otherwise the bh_theme cookie this browser wrote -- so it is
+   almost always right by the time the HTML arrives.  localStorage is the
+   last resort, for a browser that refuses cookies. */
 (function () {
-  var stored = null;
-  try { stored = localStorage.getItem('blockhaven.theme'); } catch (e) {}
-  var theme = window.BH.user ? window.BH.theme : (stored || window.BH.theme || 'auto');
+  var theme = window.BH.theme;
+  if (theme !== 'light' && theme !== 'dark') {
+    try { theme = localStorage.getItem('blockhaven.theme'); } catch (e) {}
+  }
   if (theme !== 'light' && theme !== 'dark') theme = 'auto';
   document.documentElement.setAttribute('data-theme', theme);
   window.BH.theme = theme;

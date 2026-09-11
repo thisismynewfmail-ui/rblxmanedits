@@ -9,7 +9,11 @@
   <div class="panel-body">
     <div class="itemgrid">
       {% for it in items %}
-      <div class="item tier-{{ it.tier }}">
+      <div class="item tier-{{ it.tier }}" style="cursor:pointer"
+           data-item-peek="{{ it.item_id }}" data-name="{{ it.name }}"
+           data-slot-label="{{ it.slot_label }}" data-serial="{{ it.serial }}"
+           data-tier="{{ it.tier }}" data-effect="{{ it.effect }}"
+           data-effect-name="{{ it.effect_name }}" data-rarity="{{ it.rarity }}">
         <div class="thumb-wrap">
           <canvas class="thumb item-thumb" width="216" height="216"
                   data-item="{{ it.item_id }}" data-effect="{{ it.effect }}"></canvas>

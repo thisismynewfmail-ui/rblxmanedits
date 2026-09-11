@@ -77,6 +77,47 @@ def site_ticker() -> str:
     return text
 
 
+# The theme is remembered in three independent places on purpose: the
+# account row (so a phone and a desktop agree), a cookie (so the server can
+# stamp the right data-theme on the very first byte of HTML, and so the
+# choice outlives a restart even for a visitor who never signs in) and
+# localStorage (so it still works when cookies are refused).  Losing any one
+# of them does not lose the setting.
+THEME_COOKIE = "bh_theme"
+THEME_COOKIE_AGE = 365 * 24 * 3600
+
+
+def theme_for(req: Request) -> str:
+    """The theme this request should be rendered in.
+
+    An account that has actually chosen light or dark wins, because that is
+    the choice that is meant to follow the player between devices.  Anything
+    still on ``auto`` -- every signed-out visitor, and any account that has
+    not picked -- falls back to what this browser last chose.
+    """
+    choice = users.theme_of(req.user) if req.user else "auto"
+    if choice != "auto":
+        return choice
+    cookie = (req.cookies.get(THEME_COOKIE) or "").strip().lower()
+    return cookie if cookie in ("light", "dark") else "auto"
+
+
+def remember_theme(resp: Response, theme: str) -> Response:
+    """Mirror a theme change onto the device cookie.
+
+    ``auto`` means "stop overriding", so it clears the cookie rather than
+    storing the word -- otherwise an account that deliberately went back to
+    following the operating system would keep being dragged to whatever the
+    browser last had.
+    """
+    if theme in ("light", "dark"):
+        resp.set_cookie(THEME_COOKIE, theme, max_age=THEME_COOKIE_AGE,
+                        http_only=False)
+    else:
+        resp.delete_cookie(THEME_COOKIE)
+    return resp
+
+
 def context(req: Request, **extra: Any) -> Dict[str, Any]:
     user = req.user
     ctx: Dict[str, Any] = {
@@ -93,7 +134,7 @@ def context(req: Request, **extra: Any) -> Dict[str, Any]:
         "nav_requests": friends.pending_count(user["id"]) if user else 0,
         "nav_friends": friends.count_friends(user["id"]) if user else 0,
         "is_admin": bool(user and user["is_admin"]),
-        "theme": users.theme_of(user) if user else "auto",
+        "theme": theme_for(req),
         "fmt_time": fmt_time,
         "fmt_date": fmt_date,
         "fmt_num": fmt_num,

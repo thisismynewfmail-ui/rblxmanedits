@@ -106,6 +106,47 @@
     });
   };
 
+  /* A quick look at one item without leaving the page -- used by the item
+     strip on a profile, where clicking a tile should show the piece rather
+     than only ever jumping to the inventory. */
+  Site.showItem = function (data) {
+    var unusual = data.tier === 'unusual';
+    var lines = [];
+    if (data.slot) lines.push(['Slot', data.slot]);
+    if (data.serial) lines.push(['Serial', '#' + data.serial]);
+    lines.push(['Tier', unusual ? 'Unusual' : 'Normal']);
+    if (data.effect_name) lines.push(['Effect', data.effect_name]);
+    if (data.rarity) lines.push(['Rarity', data.rarity]);
+    var body =
+      '<div class="center"><canvas id="item-peek" width="320" height="320" ' +
+      'style="width:210px;height:210px;max-width:100%;border-radius:6px;' +
+      'border:1px solid var(--line-soft);background:' +
+      (unusual ? 'var(--tile-unusual)' : 'var(--tile-normal)') + '"></canvas></div>' +
+      '<dl class="kv" style="margin-top:12px">' +
+      lines.map(function (row) {
+        return '<dt>' + Site.escape(row[0]) + '</dt><dd>' +
+          Site.escape(row[1]) + '</dd>';
+      }).join('') + '</dl>' +
+      (data.description ? '<p class="muted tiny" style="margin-top:8px">' +
+        Site.escape(data.description) + '</p>' : '') +
+      (data.href ? '<p style="margin-top:10px"><a class="btn small block" href="' +
+        Site.escape(data.href) + '">Open the full inventory</a></p>' : '');
+    var dialog = Site.dialog({
+      title: data.name || 'Item',
+      tone: unusual ? 'purple' : 'green',
+      bodyHtml: body,
+      confirm: 'Close',
+      cancel: null
+    });
+    setTimeout(function () {
+      var canvas = document.getElementById('item-peek');
+      if (canvas && window.Thumbs) {
+        Thumbs.renderItem(canvas, data.item_id, data.effect || '');
+      }
+    }, 30);
+    return dialog;
+  };
+
   Site.confirm = function (title, body, options) {
     options = options || {};
     options.title = title;
@@ -115,6 +156,28 @@
 
   // -------------------------------------------------------------- theme
   var THEME_KEY = 'blockhaven.theme';
+  var THEME_COOKIE = 'bh_theme';
+
+  /* The choice is written to a cookie as well as to localStorage.  Two
+     reasons: the server can read a cookie, so the very first byte of the
+     next page already carries the right data-theme instead of the browser
+     repainting once the script runs; and it still works when localStorage
+     throws, which it does in a private window and wherever site data is
+     locked down.  Between the cookie, localStorage and (when signed in) the
+     account row, no single one of them going missing loses the setting --
+     including across a restart of the server. */
+  function writeThemeCookie(theme) {
+    try {
+      if (theme === 'light' || theme === 'dark') {
+        document.cookie = THEME_COOKIE + '=' + theme +
+          '; Path=/; Max-Age=31536000; SameSite=Lax';
+      } else {
+        // 'auto' means stop overriding, so the cookie has to go rather than
+        // sit there pinning the browser to a stale choice.
+        document.cookie = THEME_COOKIE + '=; Path=/; Max-Age=0; SameSite=Lax';
+      }
+    } catch (e) {}
+  }
 
   Site.theme = function () {
     return document.documentElement.getAttribute('data-theme') || 'auto';
@@ -143,7 +206,10 @@
     // the 3D previews paint their own sky, so they need telling too
     if (window.Thumbs && Thumbs.retheme) Thumbs.retheme();
     try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+    writeThemeCookie(theme);
     // Storing it on the account is what keeps a phone and a desktop agreeing.
+    // If this never lands -- offline, expired session -- the cookie written
+    // above still carries the choice, so the toggle is never a lie.
     if (persist !== false && window.BH && BH.user) {
       Site.post('/api/settings/theme', { theme: theme }).catch(function () {});
     }
@@ -280,6 +346,22 @@
   }
 
   document.addEventListener('click', function (event) {
+    var peek = event.target.closest('[data-item-peek]');
+    if (peek) {
+      event.preventDefault();
+      Site.showItem({
+        item_id: peek.dataset.itemPeek,
+        name: peek.dataset.name,
+        slot: peek.dataset.slotLabel,
+        serial: peek.dataset.serial,
+        tier: peek.dataset.tier,
+        effect: peek.dataset.effect,
+        effect_name: peek.dataset.effectName,
+        rarity: peek.dataset.rarity,
+        href: peek.dataset.href
+      });
+      return;
+    }
     var target = event.target.closest('[data-post-like]');
     if (target) {
       var id = parseInt(target.dataset.postLike, 10);

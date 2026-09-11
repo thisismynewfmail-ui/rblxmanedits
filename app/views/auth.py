@@ -5,8 +5,8 @@ from .. import config, db
 from ..http import router as R
 from ..http.router import Request
 from ..models import users
-from .base import (api_error, api_ok, flash_redirect, login_required, render,
-                   router)
+from .base import (api_error, api_ok, flash_redirect, login_required,
+                   remember_theme, render, router)
 
 SAFE_NEXT_PREFIXES = ("/",)
 
@@ -103,8 +103,9 @@ def settings(req: Request):
                              str(form.get("location", "")))
         return flash_redirect("/settings", "Profile updated.")
     if action == "theme":
-        users.set_theme(int(user["id"]), str(form.get("theme", "auto")))
-        return flash_redirect("/settings", "Appearance saved.")
+        theme = users.set_theme(int(user["id"]), str(form.get("theme", "auto")))
+        return remember_theme(
+            flash_redirect("/settings", "Appearance saved."), theme)
     if action == "password":
         try:
             users.change_password(int(user["id"]),
@@ -123,9 +124,11 @@ def settings(req: Request):
 def api_theme(req: Request):
     """Store the light/dark choice on the account.
 
-    The browser also keeps a copy so a reload never flashes the wrong theme,
-    but the account copy is what makes a phone and a desktop agree.
+    The account copy is what makes a phone and a desktop agree.  The same
+    response also re-stamps the device cookie, so the choice is already on
+    the wire for the next page load and survives a restart of the server
+    (and a signed-out visit) without needing JavaScript to have run.
     """
     theme = users.set_theme(int(req.user["id"]),
                             str(req.data().get("theme", "auto")))
-    return api_ok(theme=theme)
+    return remember_theme(api_ok(theme=theme), theme)

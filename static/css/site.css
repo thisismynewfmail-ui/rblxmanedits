@@ -649,12 +649,27 @@ dl.stats.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 .item.tier-unusual .thumb-wrap { background: var(--tile-unusual); }
 .item.tier-unusual { border-color: var(--unusual); box-shadow: 0 0 0 1px rgba(139,63,214,.35); }
+/* The Unusual glint.  This used to be an animated background-position on a
+   background-size wider than the tile, which tiles by default: several
+   highlights at once, and a hard jump at the wrap.  It is a single narrow
+   element swept with a transform instead -- one highlight, GPU-composited,
+   and because it starts and ends completely outside the tile the cycle joins
+   itself with nothing on screen at the seam.  The sweep is the first 55% of
+   the cycle and the rest is the tile at rest, so it reads as a glint every
+   few seconds rather than a constant strobe. */
 .item.tier-unusual::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.35) 48%, transparent 60%);
-  background-size: 220% 100%; animation: shimmer 3.4s linear infinite;
+  content: ""; position: absolute; pointer-events: none;
+  top: -25%; bottom: -25%; left: 0; width: 38%;
+  background: linear-gradient(90deg,
+              rgba(255,255,255,0) 0%, rgba(255,255,255,.10) 30%,
+              rgba(255,255,255,.42) 50%,
+              rgba(255,255,255,.10) 70%, rgba(255,255,255,0) 100%);
+  animation: shimmer 5.2s linear infinite;
 }
-@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -60% 0; } }
+@keyframes shimmer {
+  0%        { transform: translateX(-180%) skewX(-10deg); }
+  55%, 100% { transform: translateX(400%) skewX(-10deg); }
+}
 .item .thumb { width: 92%; height: auto; aspect-ratio: 1 / 1; display: block; image-rendering: auto; }
 .item .meta { padding: 6px 7px; min-width: 0; }
 .item .iname { font-weight: bold; font-size: 11px; display: block; margin-bottom: 2px;

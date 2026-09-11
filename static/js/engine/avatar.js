@@ -19,13 +19,20 @@
   var HEIGHT = 5.4;          // feet to the top of the head, both body types
   var HEAD_TOP = 5.4;
 
-  // Shared head/neck.  Deliberately a little narrower than the hat domes in
-  // the catalogue (1.5-1.62 wide) so a cap or a beanie encloses the skull
-  // instead of the skull poking out through its sides.
+  /* Shared head/neck.  The width is pinned at 1.46 because the tightest
+     brims in the catalogue are 1.56-1.62 across and the skull has to stay
+     inside them; the friendlier proportion therefore comes out of the other
+     two axes.  It is wider than it is tall (1.14:1 rather than the old
+     1.07:1) and a little deeper, which reads as a round face rather than a
+     tall brick, and the top stays pinned to HEAD_TOP so every hat anchor,
+     the eye height and the hitbox are all untouched.  The neck is shorter
+     and thicker so the head sits down on the shoulders instead of being
+     served up on a post -- a short neck is most of what makes a character
+     read as cute. */
   var HEAD = {
-    size: [1.46, 1.36, 1.38],
-    centre: [0, 4.72, 0],
-    neck: { size: [0.64, 0.34, 0.62], y: 3.98 }
+    size: [1.46, 1.28, 1.40],
+    centre: [0, 4.76, 0],
+    neck: { size: [0.70, 0.30, 0.66], y: 4.03 }
   };
 
   /* The two builds differ by silhouette, not by parts: same segments, same
@@ -40,16 +47,22 @@
     male: {
       id: 'male',
       label: 'Male',
-      // stacked torso segments, top first; "decal" marks the one a shirt
-      // graphic is printed on
+      // Stacked torso segments, top first; "decal" marks the one a shirt
+      // graphic is printed on.  Consecutive segments overlap by more than
+      // their two bevels put together (here 0.32 against 0.20), because
+      // rounded boxes that merely touch leave a groove between them and the
+      // torso reads as a stack of trays rather than one body.
       torso: [
-        { size: [2.00, 1.30, 1.06], y: 3.36, decal: true },
-        { size: [1.94, 0.86, 1.02], y: 2.43 }
+        { size: [2.00, 1.39, 1.06], y: 3.315, decal: true },
+        { size: [1.94, 0.94, 1.02], y: 2.47 }
       ],
       chest: { size: [2.00, 1.30, 1.06], y: 3.36 },
       waistLine: 2.00,
       hips: { size: [1.96, 0.38, 1.06], y: 2.06 },
-      arm: { size: [0.98, 2.02, 0.98], x: 1.44, pivotY: 3.98 },
+      // narrow across, deeper front to back: a rectangle in section, not a
+      // post.  x moves in with the half-width so the inner face still
+      // meets the torso at the same place and the shoulder joint is sound.
+      arm: { size: [0.82, 2.02, 0.96], x: 1.36, pivotY: 3.98 },
       leg: { size: [1.00, 2.00, 1.02], x: 0.52, pivotY: 2.00 },
       foot: { size: [1.06, 0.28, 1.24], z: 0.10 },
       backAnchor: [0, 3.02, -0.54]
@@ -60,18 +73,20 @@
       // Three segments of two widths.  The top two share a width so there is
       // no step across the front, but the upper one is deeper -- which reads
       // as a chest in profile and leaves the front flat for a shirt graphic.
+      // Each pair overlaps by 0.20 against a combined bevel of 0.13, so the
+      // three read as one tapering body instead of three slabs.
       torso: [
-        { size: [1.62, 0.62, 1.02], y: 3.68 },
-        { size: [1.62, 0.62, 0.92], y: 3.05, decal: true },
-        { size: [1.40, 0.62, 0.86], y: 2.45 }
+        { size: [1.56, 0.73, 1.00], y: 3.645 },
+        { size: [1.56, 0.82, 0.90], y: 3.07, decal: true },
+        { size: [1.38, 0.70, 0.84], y: 2.51 }
       ],
-      chest: { size: [1.62, 1.25, 0.97], y: 3.37 },
-      waistLine: 2.14,
-      hips: { size: [1.74, 0.52, 1.00], y: 2.10 },
-      arm: { size: [0.76, 2.10, 0.80], x: 1.18, pivotY: 3.97 },
-      leg: { size: [0.80, 2.10, 0.88], x: 0.42, pivotY: 2.10 },
-      foot: { size: [0.86, 0.24, 1.08], z: 0.10 },
-      backAnchor: [0, 3.04, -0.48]
+      chest: { size: [1.56, 1.26, 0.95], y: 3.38 },
+      waistLine: 2.16,
+      hips: { size: [1.70, 0.54, 0.98], y: 2.12 },
+      arm: { size: [0.64, 2.12, 0.78], x: 1.07, pivotY: 3.99 },
+      leg: { size: [0.76, 2.12, 0.86], x: 0.40, pivotY: 2.12 },
+      foot: { size: [0.82, 0.24, 1.04], z: 0.10 },
+      backAnchor: [0, 3.06, -0.46]
     }
   };
 
@@ -438,7 +453,9 @@
     var armColour = (descriptor.items && descriptor.items.shirt &&
                      descriptor.items.shirt.data && descriptor.items.shirt.data.arms) ||
                     colourOf(descriptor, 'right_arm', '#f5cd30');
-    var armThickness = body.arm.size[0] * 0.44;
+    // the real arm is rectangular now, so the view model takes the mean of
+    // its two cross-section axes rather than the narrow one alone
+    var armThickness = (body.arm.size[0] + body.arm.size[2]) * 0.5 * 0.46;
 
     // forearm
     var armLocal = [base[0] - 0.10, base[1] - 0.34, base[2] - 0.78];

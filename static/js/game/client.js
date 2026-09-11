@@ -158,7 +158,6 @@
         return;
       }
       if (self.paused) return;
-      if (!self.mouseGrabbed && !action) return;
       if (action === 'scoreboard') { event.preventDefault(); self.hud.toggleScoreboard(true); return; }
       if (action === 'chat') { event.preventDefault(); self.hud.openChat(false); return; }
       if (action === 'teamchat') { event.preventDefault(); self.hud.openChat(true); return; }
@@ -229,11 +228,16 @@
     } else if (document.pointerLockElement) {
       document.exitPointerLock();
     }
-    if (value) this.hud.showFocusHint(false);
+    if (value) {
+      this.hud.showFocusHint(false);
+      if (this.scoped) { this.scoped = false; this.hud.setScope(false); }
+    }
   };
 
   Client.prototype.toggleCamera = function () {
     this.thirdPerson = !this.thirdPerson;
+    // the scope is a first person sight; it has no meaning over the shoulder
+    if (this.scoped) { this.scoped = false; this.hud.setScope(false); }
     var badge = document.getElementById('view-badge');
     if (badge) badge.textContent = this.thirdPerson ? '3rd person' : '1st person';
     this.hud.toast(this.thirdPerson ? 'Third person' : 'First person');
@@ -377,6 +381,7 @@
     });
     net.on('died', function (msg) {
       self.local.alive = false;
+      if (self.scoped) { self.scoped = false; self.hud.setScope(false); }
       self.respawnAt = performance.now() / 1000 + msg.in;
       self.deadBy = msg.by;
       self.audio.play('die');
