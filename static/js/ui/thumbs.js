@@ -248,6 +248,97 @@
     });
   };
 
+  /* A live, turning render of one item, with its Unusual effect actually
+     running rather than frozen at frame 90.
+
+     It borrows the one shared offscreen renderer the thumbnails already use
+     and blits into the target canvas each frame, so opening a preview does
+     not cost a second WebGL context -- a browser only allows a handful, and
+     an inventory page can open a lot of previews in a session.  Because the
+     renderer is shared, only one spotlight may run at a time: starting a new
+     one stops the old one, and so does stop().  Call stop() when the dialog
+     closes or the loop keeps burning frames behind it. */
+  function ItemSpotlight(canvas, itemId, effect) {
+    this.canvas = canvas;
+    this.effect = effect || '';
+    this.angle = -0.62;
+    this.time = 0;
+    this.last = 0;
+    this.running = true;
+    this.spec = null;
+    var self = this;
+    Thumbs.loadCatalog().then(function (catalog) {
+      var item = catalog[itemId];
+      if (!item || !self.running) return;
+      self.spec = Thumbs.itemParts(item, self.effect);
+      self.angle = self.spec.angle;
+      // the scene has no static geometry; clearing those batches once is
+      // enough, and doing it per frame would be pure waste
+      var renderer = ensureRenderer();
+      if (renderer) renderer.buildStatic([]);
+      self.frame = self.frame.bind(self);
+      self.raf = requestAnimationFrame(self.frame);
+    });
+  }
+
+  ItemSpotlight.prototype.frame = function (now) {
+    if (!this.running) return;
+    this.raf = requestAnimationFrame(this.frame);
+    // a canvas that has been torn out of the document has nothing to show
+    if (!this.canvas.isConnected) { this.stop(); return; }
+    var dt = Math.min(0.05, (now - (this.last || now)) / 1000);
+    this.last = now;
+    this.time += dt;
+    this.angle += dt * 0.35;
+
+    var renderer = ensureRenderer();
+    if (!renderer) { this.stop(); return; }
+    var dark = window.Site ? Site.isDark() : false;
+    renderer.setSky(dark
+      ? { top: '#1b2836', horizon: '#2b3d50', sun: [0.45, 0.8, 0.35], clouds: 0, tint: '#5d7791' }
+      : { top: '#bcdcf5', horizon: '#f4f9fc', sun: [0.45, 0.8, 0.35], clouds: 0, tint: '#ffffff' });
+    renderer.beginFrame(dt);
+    var parts = this.spec.parts;
+    parts.forEach(function (part) { renderer.push(part); });
+    frameCamera(renderer, parts, this.spec.padding, this.angle, this.spec.tilt);
+    var def = this.effect && Thumbs.effects ? Thumbs.effects[this.effect] : null;
+    if (def && Thumbs.particles) {
+      Thumbs.particles.setEmitter('spotlight', def,
+                                  this.spec.anchor || [0, 0, 0]);
+      Thumbs.particles.update(dt);
+    }
+    renderer.render();
+    if (def && Thumbs.particles) Thumbs.particles.draw(renderer);
+    blit(this.canvas, renderer.canvas);
+  };
+
+  ItemSpotlight.prototype.stop = function () {
+    if (!this.running) return;
+    this.running = false;
+    if (this.raf) cancelAnimationFrame(this.raf);
+    this.raf = 0;
+    // leave the shared particle system as we found it, or the next static
+    // thumbnail inherits a cloud of this item's sparks
+    if (Thumbs.particles) {
+      Thumbs.particles.clearEmitter('spotlight');
+      Thumbs.particles.count = 0;
+      Thumbs.particles.emitters = {};
+    }
+    if (Thumbs.spotlight === this) Thumbs.spotlight = null;
+  };
+
+  Thumbs.spotlight = null;
+
+  Thumbs.startSpotlight = function (canvas, itemId, effect) {
+    Thumbs.stopSpotlight();
+    Thumbs.spotlight = new ItemSpotlight(canvas, itemId, effect);
+    return Thumbs.spotlight;
+  };
+
+  Thumbs.stopSpotlight = function () {
+    if (Thumbs.spotlight) Thumbs.spotlight.stop();
+  };
+
   Thumbs.renderAvatarFor = function (canvas, username) {
     var key = 'avatar:' + username;
     if (Thumbs.imageCache[key]) { blit(canvas, Thumbs.imageCache[key]); return; }
@@ -363,6 +454,10 @@
   };
 
   // ------------------------------------------------------- live 3D preview
+  // Avatar.pose reads a speed for the walk and run cycles; the others ignore
+  // it.  These are the values the game feeds it at those gaits.
+  var POSE_SPEED = { walk: 9, run: 18 };
+
   function LivePreview(container, descriptor) {
     this.container = container;
     this.descriptor = descriptor;
@@ -385,6 +480,11 @@
     this.distance = 12.5;
     this.spin = true;
     this.time = 0;
+    // Which animation the preview plays.  Most previews want a character
+    // standing still; the front page wants one caught mid-stride.
+    this.poseName = (descriptor && descriptor.pose) || 'idle';
+    this.poseSpeed = POSE_SPEED[this.poseName] || 0;
+    resolveEffect(descriptor);
     this.bindInput();
     this.loop = this.loop.bind(this);
     requestAnimationFrame(this.loop);
@@ -438,12 +538,37 @@
 
   LivePreview.prototype.setDescriptor = function (descriptor) {
     this.descriptor = descriptor;
+    resolveEffect(descriptor);
+    if (descriptor && descriptor.pose) this.setPose(descriptor.pose);
+  };
+
+  /* A descriptor may name its Unusual effect without carrying the particle
+     definition -- the avatar API sends both, but anything assembled
+     elsewhere (the welcome hero, a hand-built demo) only has the id.  The
+     table arrives with the catalogue, so fill it in here rather than making
+     every caller know about it. */
+  function resolveEffect(descriptor) {
+    var hat = descriptor && descriptor.items && descriptor.items.hat;
+    if (!hat || hat.effect_def || !hat.effect) return;
+    var def = (Thumbs.effects || {})[hat.effect];
+    if (def) hat.effect_def = def;
+  }
+
+  LivePreview.prototype.setPose = function (name) {
+    this.poseName = name || 'idle';
+    this.poseSpeed = POSE_SPEED[this.poseName] || 0;
   };
 
   /* The preview draws its own sky, so it has to follow the site theme or a
-     dark page ends up with a bright white window punched in it. */
+     dark page ends up with a bright white window punched in it.  A container
+     can also pin the sky with data-sky, which is what the welcome hero does:
+     it sits on a dark stage in both themes, so a light sky would punch a
+     bright rectangle through the middle of it. */
   LivePreview.prototype.applyTheme = function () {
-    var dark = window.Site ? Site.isDark() : false;
+    var forced = this.container && this.container.dataset
+      ? this.container.dataset.sky : '';
+    var dark = forced ? forced === 'dark'
+                      : (window.Site ? Site.isDark() : false);
     this.dark = dark;
     this.renderer.setSky(dark
       ? { top: '#16222e', horizon: '#243545', sun: [0.4, 0.8, 0.35],
@@ -465,7 +590,7 @@
     this.renderer.resize();
     var parts = Avatar.build(this.descriptor, {
       position: [0, 0, 0], yaw: 0, time: this.time,
-      pose: Avatar.pose('idle', this.time, 0)
+      pose: Avatar.pose(this.poseName, this.time, this.poseSpeed)
     });
     // The projection fixes the vertical field of view, so a narrow panel is
     // the one that crops: pull the camera back until the character's width

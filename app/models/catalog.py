@@ -191,6 +191,22 @@ SLOT_LABELS = {
 }
 
 
+# Seasonal collections.  The key is what the URL carries, the value is what
+# the market prints above the aisle.
+TAG_LABELS = {"halloween": "Hollow Harvest"}
+
+
+def _tag(item, tag="halloween"):
+    """Mark an item as part of a seasonal collection.
+
+    Tagged items are ordinary catalogue entries -- on sale all year, at the
+    same price, with the same Unusual odds.  The tag only groups them so the
+    event panel on the home page has an aisle to point at.
+    """
+    item["tag"] = tag
+    return item
+
+
 def _hat(item_id, name, price, parts, desc, rarity="common", order=0):
     return {"id": item_id, "name": name, "slot": "hat", "price": price,
             "rarity": rarity, "description": desc, "sort_order": order,
@@ -356,6 +372,52 @@ HATS: List[Dict[str, Any]] = [
         {"t": "cone", "p": [0, 0.845, 0], "s": [0.9, 0.85, 0.9], "c": "#f2f3f3"},
         {"t": "cone", "p": [0, 0.995, 0], "s": [0.592, 0.55, 0.592], "c": "#e2621b"},
     ], "Borrowed. Definitely borrowed.", "common", 20),
+
+    # ------------------------------------------------------- Hollow Harvest
+    # The seasonal set.  Tagged rather than hidden, so it lives in the
+    # catalogue all year and the event page just points at the tag.
+    _tag(_hat("hat_jack", "Jack-o'-Lantern", 1200, [
+        {"t": "sph", "p": [0, 0.62, 0], "s": [1.66, 1.52, 1.66], "c": "#e2621b"},
+        {"t": "cyl", "p": [0, 1.36, 0], "s": [0.22, 0.42, 0.22], "c": "#3f6b2a"},
+        {"t": "cyl", "p": [0.16, 1.5, 0.1], "s": [0.14, 0.3, 0.14], "c": "#4d7d33",
+         "r": [0.3, 0, 0.5]},
+        # the carved face: emissive, so it glows in a dark world
+        {"t": "cone", "p": [-0.3, 0.74, 0.74], "s": [0.34, 0.34, 0.3], "c": "#ffd45e",
+         "m": "neon", "r": [1.5708, 0, 0]},
+        {"t": "cone", "p": [0.3, 0.74, 0.74], "s": [0.34, 0.34, 0.3], "c": "#ffd45e",
+         "m": "neon", "r": [1.5708, 0, 0]},
+        {"t": "box", "p": [0, 0.3, 0.76], "s": [0.86, 0.18, 0.12], "c": "#ffd45e",
+         "m": "neon"},
+        {"t": "box", "p": [-0.3, 0.44, 0.76], "s": [0.16, 0.18, 0.12], "c": "#ffd45e",
+         "m": "neon"},
+        {"t": "box", "p": [0.3, 0.44, 0.76], "s": [0.16, 0.18, 0.12], "c": "#ffd45e",
+         "m": "neon"},
+    ], "It is lit from the inside and nobody asks how.", "rare", 21)),
+
+    _tag(_hat("hat_witch", "Witching Hat", 900, [
+        {"t": "cyl", "p": [0, 0.06, 0], "s": [2.5, 0.12, 2.5], "c": "#2a1740"},
+        {"t": "cyl", "p": [0, 0.2, 0], "s": [1.66, 0.22, 1.66], "c": "#3a2057"},
+        # the cone and its band, built the same way the traffic cone is: one
+        # apex, three shells, so the band follows the surface
+        {"t": "cone", "p": [0, 1.05, 0], "s": [1.5, 1.8, 1.5], "c": "#2a1740"},
+        {"t": "cone", "p": [0, 1.3, 0], "s": [1.03, 1.3, 1.03], "c": "#6b3fa0"},
+        {"t": "cone", "p": [0, 1.51, 0], "s": [0.66, 0.88, 0.66], "c": "#2a1740",
+         "r": [0.12, 0, 0.16]},
+        {"t": "sph", "p": [0, 0.34, 0.78], "s": [0.3, 0.3, 0.16], "c": "#ffd45e",
+         "m": "neon"},
+    ], "Brim wide enough to keep the rain, and the questions, off.",
+        "uncommon", 22)),
+
+    _tag(_hat("hat_bones", "Bone Crown", 1800, [
+        {"t": "cyl", "p": [0, 0.18, 0], "s": [1.6, 0.34, 1.6], "c": "#e8e2d2"},
+        {"t": "cone", "p": [0, 0.62, 0.66], "s": [0.3, 0.7, 0.3], "c": "#e8e2d2"},
+        {"t": "cone", "p": [0.62, 0.62, 0.24], "s": [0.3, 0.7, 0.3], "c": "#dcd5c2"},
+        {"t": "cone", "p": [-0.62, 0.62, 0.24], "s": [0.3, 0.7, 0.3], "c": "#dcd5c2"},
+        {"t": "cone", "p": [0.42, 0.55, -0.58], "s": [0.26, 0.6, 0.26], "c": "#cfc7b2"},
+        {"t": "cone", "p": [-0.42, 0.55, -0.58], "s": [0.26, 0.6, 0.26], "c": "#cfc7b2"},
+        {"t": "sph", "p": [0, 0.42, 0.8], "s": [0.26, 0.26, 0.2], "c": "#8ae66a",
+         "m": "neon"},
+    ], "Somebody grew these. Nobody says who.", "rare", 23)),
 ]
 
 # -------------------------------------------------------------------- faces
@@ -443,6 +505,16 @@ FACES: List[Dict[str, Any]] = [
         {"k": "rect", "x": 0, "y": 0.16, "w": 0.05, "h": 0.12, "c": "#19f0d8"},
         {"k": "rect", "x": 0.14, "y": 0.16, "w": 0.05, "h": 0.12, "c": "#19f0d8"},
     ], "BEEP. Acquiring targets.", 9, "uncommon"),
+
+    _tag(_face("face_hollow", "Hollow Eyes", 320, [
+        {"k": "ellipse", "x": -0.23, "y": -0.14, "w": 0.17, "h": 0.21, "c": "#120d18"},
+        {"k": "ellipse", "x": 0.23, "y": -0.14, "w": 0.17, "h": 0.21, "c": "#120d18"},
+        {"k": "ellipse", "x": -0.23, "y": -0.12, "w": 0.07, "h": 0.09, "c": "#ff8a3d"},
+        {"k": "ellipse", "x": 0.23, "y": -0.12, "w": 0.07, "h": 0.09, "c": "#ff8a3d"},
+        {"k": "rect", "x": 0, "y": 0.16, "w": 0.52, "h": 0.10, "c": "#120d18"},
+        {"k": "rect", "x": -0.16, "y": 0.16, "w": 0.06, "h": 0.20, "c": "#120d18"},
+        {"k": "rect", "x": 0.16, "y": 0.16, "w": 0.06, "h": 0.20, "c": "#120d18"},
+    ], "The lights are on. Something else is home.", 11, "uncommon")),
 
     _face("face_cat", "Cat Face", 300, [
         {"k": "ellipse", "x": -0.22, "y": -0.14, "w": 0.09, "h": 0.20, "c": "#1a1a1a"},
@@ -562,6 +634,27 @@ BACK_ITEMS: List[Dict[str, Any]] = [
          {"t": "cyl", "p": [-0.42, -0.85, -0.55], "s": [0.35, 0.35, 0.35], "c": "#4a4a4a"},
          {"t": "box", "p": [0, 0.3, -0.5], "s": [0.5, 0.4, 0.3], "c": "#6d6e6c"},
      ]}},
+    _tag({"id": "back_spider", "name": "Cellar Spider", "slot": "back",
+          "price": 1400, "rarity": "rare", "sort_order": 5,
+          "description": "Eight legs, no opinions. It just holds on.",
+          "data": {"parts": [
+              {"t": "sph", "p": [0, 0.3, -0.62], "s": [0.92, 0.78, 0.92],
+               "c": "#241a30"},
+              {"t": "sph", "p": [0, 0.62, -0.3], "s": [0.5, 0.46, 0.5],
+               "c": "#312341"},
+              {"t": "sph", "p": [-0.12, 0.68, -0.14], "s": [0.14, 0.14, 0.14],
+               "c": "#ff5b4a", "m": "neon"},
+              {"t": "sph", "p": [0.12, 0.68, -0.14], "s": [0.14, 0.14, 0.14],
+               "c": "#ff5b4a", "m": "neon"},
+              {"t": "cyl", "p": [-0.72, 0.5, -0.5], "s": [0.1, 1.1, 0.1],
+               "c": "#241a30", "r": [0.2, 0, 1.0]},
+              {"t": "cyl", "p": [0.72, 0.5, -0.5], "s": [0.1, 1.1, 0.1],
+               "c": "#241a30", "r": [0.2, 0, -1.0]},
+              {"t": "cyl", "p": [-0.66, 0.14, -0.72], "s": [0.1, 1.0, 0.1],
+               "c": "#241a30", "r": [-0.3, 0, 1.2]},
+              {"t": "cyl", "p": [0.66, 0.14, -0.72], "s": [0.1, 1.0, 0.1],
+               "c": "#241a30", "r": [-0.3, 0, -1.2]},
+          ]}}),
     {"id": "back_cape", "name": "Hero Cape", "slot": "back",
      "price": 900, "rarity": "uncommon", "sort_order": 4,
      "description": "Billows even indoors.",

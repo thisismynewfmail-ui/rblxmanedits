@@ -19,10 +19,14 @@ class MarketError(Exception):
 
 
 def listing(slot: Optional[str] = None, sort: str = "featured",
-            search: str = "") -> List[Dict[str, Any]]:
+            search: str = "", tag: str = "") -> List[Dict[str, Any]]:
     items = [it for it in catalog.ALL_ITEMS if not it.get("hidden")]
     if slot and slot != "all":
         items = [it for it in items if it["slot"] == slot]
+    if tag:
+        # a seasonal collection: ordinary items grouped so an event can
+        # point at an aisle rather than at the whole catalogue
+        items = [it for it in items if it.get("tag") == tag]
     term = (search or "").strip().lower()
     if term:
         items = [it for it in items

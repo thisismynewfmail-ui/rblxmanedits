@@ -15,7 +15,13 @@
         <div class="itemgrid">
           {% for it in items %}
           <div class="item tier-{{ it.tier }}" data-inv="{{ it.inv_id }}">
-            <div class="thumb-wrap">
+            <!-- The picture is the click target for a closer look; the
+                 buttons below it keep their own jobs. -->
+            <div class="thumb-wrap" style="cursor:zoom-in"
+                 data-item-peek="{{ it.item_id }}" data-name="{{ it.name }}"
+                 data-slot-label="{{ it.slot_label }}" data-serial="{{ it.serial }}"
+                 data-tier="{{ it.tier }}" data-effect="{{ it.effect }}"
+                 data-effect-name="{{ it.effect_name }}" data-rarity="{{ it.rarity }}">
               <canvas class="thumb item-thumb" width="216" height="216"
                       data-item="{{ it.item_id }}" data-effect="{{ it.effect }}"></canvas>
               <span class="tier-flag {{ it.tier }}">{{ it.tier_label }}</span>

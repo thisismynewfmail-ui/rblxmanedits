@@ -69,7 +69,7 @@
     options = options || {};
     return new Promise(function (resolve) {
       var scrim = document.createElement('div');
-      scrim.className = 'modal-scrim';
+      scrim.className = 'modal-scrim' + (options.klass ? ' ' + options.klass : '');
       var confirmLabel = options.confirm || 'Confirm';
       var cancelLabel = options.cancel === null ? null : (options.cancel || 'Cancel');
       scrim.innerHTML =
@@ -87,6 +87,9 @@
       function close(result) {
         scrim.remove();
         document.removeEventListener('keydown', onKey);
+        // anything the dialog started -- a running 3D preview, a timer --
+        // gets torn down here rather than left burning behind a closed panel
+        if (options.onClose) { try { options.onClose(); } catch (e) {} }
         resolve(result);
       }
       function onKey(event) {
@@ -118,10 +121,11 @@
     if (data.effect_name) lines.push(['Effect', data.effect_name]);
     if (data.rarity) lines.push(['Rarity', data.rarity]);
     var body =
-      '<div class="center"><canvas id="item-peek" width="320" height="320" ' +
-      'style="width:210px;height:210px;max-width:100%;border-radius:6px;' +
-      'border:1px solid var(--line-soft);background:' +
-      (unusual ? 'var(--tile-unusual)' : 'var(--tile-normal)') + '"></canvas></div>' +
+      '<div class="peek-stage' + (unusual ? ' unusual' : '') + '">' +
+      '<canvas id="item-peek" width="480" height="480"></canvas>' +
+      (data.effect_name ? '<span class="peek-effect">' +
+        Site.escape(data.effect_name) + '</span>' : '') +
+      '</div>' +
       '<dl class="kv" style="margin-top:12px">' +
       lines.map(function (row) {
         return '<dt>' + Site.escape(row[0]) + '</dt><dd>' +
@@ -134,13 +138,21 @@
     var dialog = Site.dialog({
       title: data.name || 'Item',
       tone: unusual ? 'purple' : 'green',
+      klass: 'peek-modal',
       bodyHtml: body,
       confirm: 'Close',
-      cancel: null
+      cancel: null,
+      // the preview is a running render loop, so closing has to stop it
+      onClose: function () { if (window.Thumbs) Thumbs.stopSpotlight(); }
     });
     setTimeout(function () {
       var canvas = document.getElementById('item-peek');
-      if (canvas && window.Thumbs) {
+      if (!canvas || !window.Thumbs) return;
+      // Live rather than a still: an Unusual is a particle effect, and a
+      // frozen frame of one is not what the player paid for.
+      if (Thumbs.startSpotlight) {
+        Thumbs.startSpotlight(canvas, data.item_id, data.effect || '');
+      } else {
         Thumbs.renderItem(canvas, data.item_id, data.effect || '');
       }
     }, 30);
@@ -375,6 +387,7 @@
         effect: peek.dataset.effect,
         effect_name: peek.dataset.effectName,
         rarity: peek.dataset.rarity,
+        description: peek.dataset.desc,
         href: peek.dataset.href
       });
       return;

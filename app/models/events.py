@@ -8,12 +8,80 @@ same spotlight at the same time without any stored state.
 """
 from __future__ import annotations
 
+import calendar
 import time
 from typing import Any, Dict, List
 
 WEEK = 7 * 86400
 # Monday 00:00 UTC of the week containing the epoch-anchored rotation.
 ANCHOR = 345600  # 1970-01-05, a Monday
+
+
+# ------------------------------------------------------------------- events
+# A seasonal event is a spotlight with a scene attached.  The scene name picks
+# which animated panel the home page draws; everything else is copy.  Like the
+# weekly rotation it is derived from the clock, so every player sees the same
+# thing at the same time with nothing stored.
+EVENTS: List[Dict[str, Any]] = [
+    {
+        "id": "hollow_harvest",
+        "scene": "halloween",
+        "kicker": "Seasonal event",
+        "title": "Hollow Harvest",
+        "blurb": "The lanterns are lit and something is wearing the hats. "
+                 "Five seasonal pieces are in the market until the nights "
+                 "get short again.",
+        "cta": "Visit the night market",
+        "href": "/market?tag=halloween",
+        "tag": "halloween",
+        # Inclusive month/day window, evaluated in UTC.  It opens at the
+        # start of September because the build-up is half the event -- the
+        # market fills before the night it is all for.
+        "from": (9, 1),
+        "to": (11, 2),
+        "facts": [
+            ("5", "seasonal pieces"),
+            ("0.5%", "Unusual on any hat"),
+            ("12", "particle effects"),
+        ],
+    },
+]
+
+
+def active_event(now: float = 0.0) -> Dict[str, Any]:
+    """The seasonal event running right now, or an empty dict.
+
+    Windows are month/day pairs rather than timestamps so the event comes
+    back every year without anybody editing a date.
+    """
+    now = now or time.time()
+    stamp = time.gmtime(now)
+    today = (stamp.tm_mon, stamp.tm_mday)
+    for event in EVENTS:
+        start, end = event["from"], event["to"]
+        inside = (start <= today <= end if start <= end
+                  else today >= start or today <= end)
+        if inside:
+            entry = dict(event)
+            entry["ends_at"] = _event_end(now, end)
+            entry["seconds_left"] = max(0, entry["ends_at"] - int(now))
+            return entry
+    return {}
+
+
+def _event_end(now: float, end: tuple) -> int:
+    """Midnight UTC at the end of the event's last day, this year or next."""
+    stamp = time.gmtime(now)
+    year = stamp.tm_year
+    for bump in (0, 1):
+        try:
+            when = calendar.timegm(
+                (year + bump, end[0], end[1], 23, 59, 59, 0, 0, 0))
+        except ValueError:
+            continue
+        if when > now:
+            return int(when)
+    return int(now)
 
 
 SPOTLIGHTS: List[Dict[str, Any]] = [

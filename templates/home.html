@@ -1,22 +1,5 @@
 {% include "partials/head.html" %}
-
-<div class="eventbar" data-countdown="{{ spotlight_left }}">
-  <span class="glow"></span>
-  <div class="inner">
-    <div class="tagline">
-      <span class="kicker">{{ spotlight.kicker }}</span>
-      <h2>{{ spotlight.title }}</h2>
-      <p>{{ spotlight.blurb }}</p>
-    </div>
-    <div class="countdown" aria-label="Time left in this spotlight">
-      <div class="unit"><b data-cd="d">0</b><span>days</span></div>
-      <div class="unit"><b data-cd="h">0</b><span>hrs</span></div>
-      <div class="unit"><b data-cd="m">0</b><span>min</span></div>
-      <div class="unit"><b data-cd="s">0</b><span>sec</span></div>
-    </div>
-    <a class="btn go" href="{{ spotlight.href }}">{{ spotlight.cta }}</a>
-  </div>
-</div>
+{% include "partials/eventbar.html" %}
 
 <div class="row">
   <div class="col-side">

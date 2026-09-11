@@ -13,7 +13,8 @@ import json
 import math
 import sys
 import time
-from typing import Any, Dict, List
+import uuid
+from typing import Any, Dict, List, Tuple
 
 import os
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -78,16 +79,64 @@ def close_in(mover: Bot, others: List[Bot], target, distance: float = 8.0,
     return remaining
 
 
+SEED_ACCOUNTS = [
+    ("admin_system", "passman69"), ("admin_test", "passman69"),
+    ("builderman_x", "blockhaven"), ("RetroKid2007", "blockhaven"),
+    ("BlockSmith", "blockhaven"), ("NoobSlayer99", "blockhaven"),
+    ("PixelPatty", "blockhaven"), ("CartPusher", "blockhaven"),
+    ("FlagRunner", "blockhaven"), ("GrillMaster", "blockhaven")]
+
+# Throwaway accounts, made once per run and reused across suites.
+BOT_PASSWORD = "botpass99"
+_extra_accounts: List[Tuple[str, str]] = []
+
+
+def fresh_accounts(count: int) -> List[Tuple[str, str]]:
+    """Make as many throwaway accounts as a test asks for.
+
+    The server allows one live game session per account -- a second window
+    pulls the first out of the world -- so a test that wants N players in a
+    world at once genuinely needs N accounts, and the ten seeded demo players
+    are not enough for the overflow test.
+
+    These go straight into the database rather than through /register, which
+    is rate limited per address (deliberately) and would refuse a test that
+    needs a handful of accounts on top of whatever else has run today.
+    """
+    from app import db
+    from app.models import users
+    db.init_db()
+    while len(_extra_accounts) < count:
+        name = "bot_%s" % uuid.uuid4().hex[:10]
+        try:
+            users.create_user(name, BOT_PASSWORD)
+        except Exception as exc:
+            raise RuntimeError("could not create a test account: %s" % exc)
+        _extra_accounts.append((name, BOT_PASSWORD))
+    return list(_extra_accounts[:count])
+
+
+def spawn_accounts(count: int) -> List[Tuple[str, str]]:
+    """`count` distinct accounts, seeded ones first."""
+    pool = list(SEED_ACCOUNTS)
+    if count > len(pool):
+        pool += fresh_accounts(count - len(pool))
+    return pool[:count]
+
+
 def spawn_bots(world: str, count: int, accounts=None) -> List[Bot]:
-    accounts = accounts or [
-        ("admin_system", "passman69"), ("admin_test", "passman69"),
-        ("builderman_x", "blockhaven"), ("RetroKid2007", "blockhaven"),
-        ("BlockSmith", "blockhaven"), ("NoobSlayer99", "blockhaven"),
-        ("PixelPatty", "blockhaven"), ("CartPusher", "blockhaven"),
-        ("FlagRunner", "blockhaven"), ("GrillMaster", "blockhaven")]
+    """Start `count` bots, each on an account of its own.
+
+    Accounts are never shared between two live bots: the platform drops the
+    older session when the same player joins from somewhere else, so two bots
+    on one account would silently become one.
+    """
+    pool = list(accounts or SEED_ACCOUNTS)
+    if count > len(pool):
+        pool += fresh_accounts(count - len(pool))
     bots = []
     for i in range(count):
-        user, password = accounts[i % len(accounts)]
+        user, password = pool[i]
         bot = Bot(HOST, PORT, user, password, world)
         bot.start()
         bots.append(bot)
@@ -421,14 +470,12 @@ def test_instances() -> None:
     import urllib.request
     bots = []
     try:
-        # capture_the_flag holds 16; open 17 sockets to force a second instance
-        accounts = [("admin_system", "passman69"), ("admin_test", "passman69"),
-                    ("builderman_x", "blockhaven"), ("RetroKid2007", "blockhaven"),
-                    ("BlockSmith", "blockhaven"), ("NoobSlayer99", "blockhaven"),
-                    ("PixelPatty", "blockhaven"), ("CartPusher", "blockhaven"),
-                    ("FlagRunner", "blockhaven"), ("GrillMaster", "blockhaven")]
+        # capture_the_flag holds 16; open 17 sockets to force a second
+        # instance.  Seventeen distinct accounts, because one account can only
+        # hold one live session.
+        accounts = spawn_accounts(17)
         for i in range(17):
-            user, password = accounts[i % len(accounts)]
+            user, password = accounts[i]
             bot = Bot(HOST, PORT, user, password, "capture_the_flag")
             bot.start()
             bots.append(bot)

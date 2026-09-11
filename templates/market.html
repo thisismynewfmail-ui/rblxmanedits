@@ -9,11 +9,21 @@
       <div class="panel-body">
         <div class="tabs">
           {% for t in tabs %}
-          <a href="/market?slot={{ t[0] }}&sort={{ sort }}" class="{{ 'on' if slot == t[0] else '' }}">{{ t[1] }}</a>
+          <a href="/market?slot={{ t[0] }}&sort={{ sort }}" class="{{ 'on' if slot == t[0] and not tag else '' }}">{{ t[1] }}</a>
           {% endfor %}
+          <a href="/market?tag=halloween" class="tab-event {{ 'on' if tag == 'halloween' else '' }}">&#127875; Hollow Harvest</a>
         </div>
+        {% if tag_label %}
+        <div class="aisle-note">
+          <b>{{ tag_label }}</b>
+          <span>The seasonal collection &mdash; ordinary catalogue items at ordinary
+            prices, grouped so you can find them.</span>
+          <a href="/market">Back to everything</a>
+        </div>
+        {% endif %}
         <form class="inline-form" method="get" action="/market" style="margin-bottom:10px">
           <input type="hidden" name="slot" value="{{ slot }}">
+          <input type="hidden" name="tag" value="{{ tag }}">
           <input type="search" name="q" value="{{ term }}" placeholder="Search the catalogue" style="flex:1 1 180px;min-width:0">
           <select name="sort">
             <option value="featured" {{ 'selected' if sort == 'featured' else '' }}>Featured</option>
@@ -28,7 +38,10 @@
         <div class="itemgrid">
           {% for it in items %}
           <div class="item" data-market-item="{{ it.id }}">
-            <div class="thumb-wrap">
+            <div class="thumb-wrap" style="cursor:zoom-in"
+                 data-item-peek="{{ it.id }}" data-name="{{ it.name }}"
+                 data-slot-label="{{ it.slot_label }}" data-tier="normal"
+                 data-rarity="{{ it.rarity }}" data-desc="{{ it.description }}">
               <canvas class="thumb item-thumb" width="216" height="216" data-item="{{ it.id }}"></canvas>
               <span class="tier-flag">Normal</span>
               <span class="owned-flag {{ '' if owned.get(it.id) else 'hidden' }}"

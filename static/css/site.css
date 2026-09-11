@@ -103,6 +103,21 @@
 
   --radius: 4px;
   color-scheme: light;
+
+  /* Hollow Harvest -- the seasonal event.  Warm lantern orange against a
+     cold violet night, which is the whole palette the panel needs. */
+  --halloween-ink: #a8410a;
+  --halloween-deep: #2a1740;
+  --halloween-edge: #e2a86a;
+  --halloween-tint: #fff3e4;
+  --halloween-sky-a: #2a1740;
+  --halloween-sky-b: #59265c;
+  --halloween-sky-c: #a8434a;
+  --halloween-moon: #ffe9b8;
+  --halloween-flame: #ff9b2f;
+  --halloween-glow: #ffd45e;
+  --halloween-mist: rgba(150, 96, 190, .30);
+
 }
 
 /* --------------------------------------------------------------- dark theme
@@ -183,6 +198,18 @@
   --unusual-ink: #d9bcff;
   --tile-normal: linear-gradient(160deg, #38301a, #211c0e);
   --tile-unusual: linear-gradient(160deg, #4b2b7c, #26114a);
+  --halloween-ink: #ffb266;
+  --halloween-deep: #1d0f2c;
+  --halloween-edge: #5b3a6b;
+  --halloween-tint: #241733;
+  --halloween-sky-a: #150b22;
+  --halloween-sky-b: #3a1a44;
+  --halloween-sky-c: #6e2b3c;
+  --halloween-moon: #ffe9b8;
+  --halloween-flame: #ff9b2f;
+  --halloween-glow: #ffd45e;
+  --halloween-mist: rgba(120, 74, 160, .34);
+
   --preview-bg: linear-gradient(#18242f, #0d161f);
   --preview-edge: #2e4257;
   --hero: linear-gradient(#123049, #071624);
@@ -264,6 +291,18 @@
     --unusual-ink: #d9bcff;
     --tile-normal: linear-gradient(160deg, #38301a, #211c0e);
     --tile-unusual: linear-gradient(160deg, #4b2b7c, #26114a);
+  --halloween-ink: #ffb266;
+  --halloween-deep: #1d0f2c;
+  --halloween-edge: #5b3a6b;
+  --halloween-tint: #241733;
+  --halloween-sky-a: #150b22;
+  --halloween-sky-b: #3a1a44;
+  --halloween-sky-c: #6e2b3c;
+  --halloween-moon: #ffe9b8;
+  --halloween-flame: #ff9b2f;
+  --halloween-glow: #ffd45e;
+  --halloween-mist: rgba(120, 74, 160, .34);
+
     --preview-bg: linear-gradient(#18242f, #0d161f);
     --preview-edge: #2e4257;
     --hero: linear-gradient(#123049, #071624);
@@ -544,6 +583,18 @@ label { display: block; font-weight: bold; margin: 8px 0 3px; color: var(--ink-l
 
 /* ------------------------------------------------- composer "To" combo box */
 .compose-panel { max-width: 640px; }
+
+/* the seasonal aisle in the market */
+.tabs .tab-event { color: var(--halloween-ink); font-weight: bold; }
+.tabs .tab-event.on { background: var(--halloween-deep); color: #ffd9a8; }
+.aisle-note {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
+  margin: 0 0 10px; padding: 7px 10px; font-size: 11px;
+  border: 1px solid var(--halloween-edge); border-radius: 4px;
+  background: var(--halloween-tint); color: var(--ink);
+}
+.aisle-note b { color: var(--halloween-ink); font-size: 12px; }
+.aisle-note span { flex: 1 1 220px; color: var(--ink-soft); }
 .compose-actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
 .combo { position: relative; }
 .combo input { width: 100%; padding-right: 26px; }
@@ -940,6 +991,380 @@ dl.stats.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .eventbar .unit b { display: block; font-size: 16px; color: #ffe08a; font-variant-numeric: tabular-nums; }
 .eventbar .unit span { font-size: 8px; text-transform: uppercase; letter-spacing: .6px; color: #bfe0ff; }
 
+
+/* ========================================================= welcome hero ====
+   The first thing a visitor sees.  The character is the real rig drawn by
+   the real engine -- not a picture of one -- and the stage around it is
+   built from gradients and keyframes so there is nothing to download.  The
+   layout is one grid that collapses to a single column on a phone, with the
+   figure on top because that is what people came to look at. */
+.hero-stage {
+  position: relative; overflow: hidden; border-radius: 6px; margin-bottom: 12px;
+  border: 1px solid var(--hero-edge); background: var(--hero);
+  display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(240px, .85fr);
+  gap: 18px; align-items: center; padding: 22px 24px;
+  color: #eaf4ff;
+}
+.hero-stage > .hero-copy, .hero-stage > .hero-figure { position: relative; z-index: 2; }
+
+/* --- stage dressing ------------------------------------------------------ */
+.hero-stage .grid-floor {
+  position: absolute; left: -20%; right: -20%; bottom: -40px; height: 58%;
+  background-image:
+    linear-gradient(rgba(160,215,255,.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(160,215,255,.14) 1px, transparent 1px);
+  background-size: 42px 42px, 42px 42px;
+  transform: perspective(420px) rotateX(62deg);
+  transform-origin: bottom center;
+  -webkit-mask-image: linear-gradient(transparent, #000 55%);
+  mask-image: linear-gradient(transparent, #000 55%);
+}
+.hero-stage .beam {
+  position: absolute; right: 12%; top: -30%; width: 46%; height: 180%;
+  background: linear-gradient(to bottom, rgba(255,255,255,.13), transparent 72%);
+  transform: rotate(14deg); filter: blur(10px);
+  animation: beamsway 12s ease-in-out infinite alternate;
+}
+@keyframes beamsway {
+  from { transform: rotate(11deg) translateX(-10px); opacity: .7; }
+  to   { transform: rotate(17deg) translateX(10px); opacity: 1; }
+}
+.hero-stage .orb {
+  position: absolute; border-radius: 50%; filter: blur(1px);
+  background: radial-gradient(circle at 35% 32%, rgba(255,255,255,.9), rgba(140,200,255,.25) 60%, transparent 70%);
+}
+.hero-stage .orb.o1 { width: 10px; height: 10px; left: 8%;  top: 22%; animation: float1 11s ease-in-out infinite; }
+.hero-stage .orb.o2 { width: 6px;  height: 6px;  left: 46%; top: 68%; animation: float2 14s ease-in-out infinite; }
+.hero-stage .orb.o3 { width: 14px; height: 14px; right: 32%; top: 14%; animation: float1 17s ease-in-out infinite reverse; }
+@keyframes float1 {
+  0%, 100% { transform: translate(0, 0); opacity: .5; }
+  50% { transform: translate(14px, -22px); opacity: 1; }
+}
+@keyframes float2 {
+  0%, 100% { transform: translate(0, 0); opacity: .35; }
+  50% { transform: translate(-18px, -16px); opacity: .9; }
+}
+
+/* --- copy ---------------------------------------------------------------- */
+.hero-stage h1 {
+  color: #fff; font-size: 30px; line-height: 1.12; margin: 0 0 8px;
+  letter-spacing: -.4px; text-shadow: 0 2px 0 rgba(0,0,0,.28);
+}
+.hero-stage h1 .l {
+  display: inline-block; opacity: 0;
+  animation: heroline .6s cubic-bezier(.2,.7,.3,1) forwards;
+}
+.hero-stage h1 .l:nth-child(1) { animation-delay: .05s; }
+.hero-stage h1 .l:nth-child(2) { animation-delay: .17s; }
+.hero-stage h1 .l:nth-child(3) { animation-delay: .29s; }
+@keyframes heroline {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+.hero-stage .lede { color: #cfe6ff; font-size: 12.5px; line-height: 1.6; margin: 0 0 14px; max-width: 52ch; }
+.hero-stage .lede .pop { color: #ffe08a; }
+.hero-stage .lede .uw { color: #d3a4ff; }
+.hero-cta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.hero-cta .btn.ghost {
+  background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.38); color: #fff;
+  box-shadow: none;
+}
+.hero-cta .btn.ghost:hover { background: rgba(255,255,255,.2); }
+.hero-stats {
+  display: flex; flex-wrap: wrap; gap: 6px 20px; list-style: none; margin: 0; padding: 0;
+}
+.hero-stats li { display: flex; flex-direction: column; min-width: 0; }
+.hero-stats b {
+  font-size: 17px; color: #fff; line-height: 1.1; font-variant-numeric: tabular-nums;
+}
+.hero-stats span {
+  font-size: 9px; text-transform: uppercase; letter-spacing: .7px; color: #9fc6e8;
+}
+
+/* --- the figure ---------------------------------------------------------- */
+.hero-figure { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+#hero-avatar {
+  height: 288px; border-radius: 6px; border: 1px solid rgba(255,255,255,.16);
+  background: rgba(0,0,0,.22);
+}
+.hero-tools { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.hero-tools .btn { flex: 0 0 auto; }
+.hero-caption {
+  font-size: 10px; color: #bfe0ff; text-align: right; flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hero-caption .uw { color: #d3a4ff; font-weight: bold; }
+#hero-reroll.spinning { opacity: .6; pointer-events: none; }
+#hero-avatar { transition: opacity .16s ease, transform .16s ease; }
+#hero-avatar.swapping { opacity: 0; transform: scale(.97); }
+
+@media (max-width: 860px) {
+  .hero-stage { grid-template-columns: minmax(0, 1fr); padding: 16px; gap: 14px; }
+  /* the character leads on a phone: it is the thing worth looking at */
+  .hero-stage .hero-figure { order: -1; }
+  .hero-stage h1 { font-size: 24px; }
+  #hero-avatar { height: 240px; }
+  .hero-cta .btn { flex: 1 1 auto; text-align: center; }
+  .hero-stats { gap: 6px 14px; }
+  .hero-stats b { font-size: 15px; }
+}
+
+/* ===================================================== Hollow Harvest ======
+   The seasonal event panel.  Every part of the scene below is an empty
+   element with a gradient and a keyframe on it: no images, nothing to
+   download, and the whole thing goes still under prefers-reduced-motion.
+   The layers are ordered back to front -- sky, moon, stars, cloud, bats,
+   hills, fence, lanterns, mist -- and each moves at its own rate, which is
+   what makes a flat strip read as depth. */
+.eventbar.season {
+  border-color: var(--halloween-edge);
+  background: linear-gradient(180deg,
+              var(--halloween-sky-a) 0%,
+              var(--halloween-sky-b) 58%,
+              var(--halloween-sky-c) 100%);
+  color: #ffeede;
+  min-height: 168px;
+}
+.eventbar.season .scene { position: absolute; inset: 0; overflow: hidden; }
+.eventbar.season .scene > * { position: absolute; }
+
+/* --- moon: a disc with a soft corona that breathes ------------------------ */
+.eventbar.season .moon {
+  right: 4%; top: 10px; width: 44px; height: 44px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%,
+              #fff8e6 0%, var(--halloween-moon) 52%, #e8c98d 100%);
+  box-shadow: 0 0 22px 8px rgba(255,220,150,.30),
+              0 0 60px 26px rgba(255,200,120,.14);
+  animation: moonpulse 7s ease-in-out infinite alternate;
+}
+@keyframes moonpulse {
+  from { box-shadow: 0 0 20px 6px rgba(255,220,150,.24), 0 0 52px 20px rgba(255,200,120,.10); }
+  to   { box-shadow: 0 0 30px 12px rgba(255,220,150,.38), 0 0 78px 34px rgba(255,200,120,.20); }
+}
+
+/* --- stars: one element, many dots, drawn as repeating radial gradients --- */
+.eventbar.season .stars {
+  inset: 0 0 40% 0;
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 22%, #fff 50%, transparent 52%),
+    radial-gradient(1.4px 1.4px at 28% 12%, #ffeeba 50%, transparent 52%),
+    radial-gradient(1.2px 1.2px at 44% 30%, #fff 50%, transparent 52%),
+    radial-gradient(1.6px 1.6px at 58% 16%, #fff 50%, transparent 52%),
+    radial-gradient(1.3px 1.3px at 72% 34%, #ffeeba 50%, transparent 52%),
+    radial-gradient(1.5px 1.5px at 86% 20%, #fff 50%, transparent 52%),
+    radial-gradient(1.2px 1.2px at 20% 44%, #fff 50%, transparent 52%),
+    radial-gradient(1.4px 1.4px at 64% 48%, #fff 50%, transparent 52%);
+  animation: twinkle 5.5s ease-in-out infinite alternate;
+}
+@keyframes twinkle { from { opacity: .45; } to { opacity: 1; } }
+
+/* --- cloud bands: wide, soft, drifting at two speeds --------------------- */
+.eventbar.season .cloudband {
+  left: -60%; width: 220%; height: 40px; border-radius: 40px;
+  background: linear-gradient(90deg, transparent,
+              rgba(60,30,80,.55) 22%, rgba(90,45,110,.6) 50%,
+              rgba(60,30,80,.55) 78%, transparent);
+  filter: blur(6px);
+}
+.eventbar.season .cloudband.a { top: 16px; animation: drift-slow 46s linear infinite; }
+.eventbar.season .cloudband.b { top: 52px; height: 28px; opacity: .7;
+  animation: drift-slow 71s linear infinite reverse; }
+@keyframes drift-slow { from { transform: translateX(-12%); } to { transform: translateX(12%); } }
+
+/* --- bats: five wedges flapping across the sky on one long loop ---------- */
+.eventbar.season .bats { inset: 0; }
+.eventbar.season .bats i {
+  position: absolute; width: 12px; height: 6px;
+  animation: batfly 19s linear infinite, flap .42s steps(2, end) infinite;
+}
+/* the wings are two halves of a CSS triangle pair */
+.eventbar.season .bats i::before,
+.eventbar.season .bats i::after {
+  content: ""; position: absolute; top: 0; width: 0; height: 0;
+  border-style: solid;
+}
+.eventbar.season .bats i::before {
+  left: 0; border-width: 0 6px 5px 0; border-color: transparent #120a1c transparent transparent;
+}
+.eventbar.season .bats i::after {
+  right: 0; border-width: 5px 6px 0 0; border-color: #120a1c transparent transparent transparent;
+}
+.eventbar.season .bats i:nth-child(1) { top: 26%; animation-delay: 0s, 0s; }
+.eventbar.season .bats i:nth-child(2) { top: 15%; animation-delay: -4s, -.1s; transform: scale(.75); }
+.eventbar.season .bats i:nth-child(3) { top: 38%; animation-delay: -8s, -.2s; transform: scale(1.15); }
+.eventbar.season .bats i:nth-child(4) { top: 21%; animation-delay: -12.5s, -.3s; transform: scale(.85); }
+.eventbar.season .bats i:nth-child(5) { top: 32%; animation-delay: -16s, -.05s; transform: scale(.65); }
+@keyframes batfly {
+  from { left: -6%; }
+  to   { left: 106%; }
+}
+@keyframes flap {
+  from { transform: scaleY(1); }
+  to   { transform: scaleY(.35); }
+}
+
+/* --- hills: two silhouette bands, the near one darker -------------------- */
+.eventbar.season .hills {
+  left: -5%; right: -5%; bottom: 0; height: 74px;
+  background-repeat: repeat-x; background-size: 190px 74px;
+}
+.eventbar.season .hills.far {
+  opacity: .55; height: 86px;
+  background-image: radial-gradient(78px 34px at 50% 100%, #3a1f4e 99%, transparent 100%);
+  background-size: 156px 86px;
+  animation: drift-slow 120s linear infinite;
+}
+.eventbar.season .hills.near {
+  background-image: radial-gradient(92px 30px at 50% 100%, #1d1029 99%, transparent 100%);
+  background-size: 122px 74px;
+}
+
+/* --- fence: repeating pickets along the bottom edge ---------------------- */
+.eventbar.season .fence {
+  left: 0; right: 0; bottom: 0; height: 22px;
+  background-image:
+    linear-gradient(90deg, #120a1c 0 7px, transparent 7px 20px),
+    linear-gradient(180deg, transparent 0 6px, #120a1c 6px 9px, transparent 9px);
+  background-size: 20px 22px, 20px 22px;
+  opacity: .9;
+}
+
+/* --- lanterns: a carved face with a flame that flickers ------------------ */
+.eventbar.season .lantern {
+  bottom: 10px; width: 26px; height: 24px; border-radius: 46% 46% 42% 42%;
+  background: linear-gradient(180deg, #f07a1e, #c0470d);
+  box-shadow: 0 0 16px 4px rgba(255,150,50,.38);
+}
+.eventbar.season .lantern::before {   /* the stalk */
+  content: ""; position: absolute; left: 50%; top: -5px; width: 4px; height: 6px;
+  margin-left: -2px; border-radius: 2px; background: #3f6b2a;
+}
+.eventbar.season .lantern::after {    /* the grin */
+  content: ""; position: absolute; left: 5px; right: 5px; bottom: 6px; height: 4px;
+  background: var(--halloween-glow);
+  clip-path: polygon(0 0, 100% 0, 88% 100%, 12% 100%);
+  box-shadow: 0 0 8px 2px rgba(255,212,94,.8);
+}
+.eventbar.season .lantern .flame {    /* the eyes, sharing the flicker */
+  position: absolute; left: 4px; right: 4px; top: 6px; height: 6px;
+  background:
+    linear-gradient(var(--halloween-glow), var(--halloween-glow)) left top / 7px 6px no-repeat,
+    linear-gradient(var(--halloween-glow), var(--halloween-glow)) right top / 7px 6px no-repeat;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  filter: drop-shadow(0 0 5px rgba(255,212,94,.9));
+  animation: flicker 2.3s ease-in-out infinite;
+}
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  12% { opacity: .55; }
+  20% { opacity: .95; }
+  46% { opacity: .7; }
+  62% { opacity: 1; }
+  78% { opacity: .62; }
+}
+.eventbar.season .lantern.l1 { left: 5%;  animation: bob 4.4s ease-in-out infinite; }
+.eventbar.season .lantern.l2 { left: 17%; transform: scale(.78);
+  animation: bob 5.6s ease-in-out infinite .6s; }
+.eventbar.season .lantern.l3 { right: 36%; transform: scale(.66);
+  animation: bob 6.4s ease-in-out infinite 1.2s; }
+@keyframes bob {
+  0%, 100% { margin-bottom: 0; }
+  50% { margin-bottom: 5px; }
+}
+
+/* --- mist: a pale band creeping along the ground ------------------------- */
+.eventbar.season .mist {
+  left: -50%; right: -50%; bottom: -6px; height: 44px;
+  background: linear-gradient(90deg, transparent,
+              var(--halloween-mist) 30%, var(--halloween-mist) 70%, transparent);
+  filter: blur(8px);
+  animation: creep 26s ease-in-out infinite alternate;
+}
+@keyframes creep {
+  from { transform: translateX(-8%) scaleY(1); }
+  to   { transform: translateX(8%) scaleY(1.25); }
+}
+
+/* --- the content on top of the scene ------------------------------------ */
+.eventbar.season .inner { align-items: flex-start; padding: 14px 16px 16px; }
+.eventbar.season .kicker {
+  background: linear-gradient(#f07a1e, #c0470d); color: #fff;
+  box-shadow: 0 0 10px rgba(255,150,50,.5);
+}
+.eventbar.season .kicker .pipkin { display: inline-block; }
+.eventbar.season h2 {
+  font-size: 22px; letter-spacing: .3px;
+  text-shadow: 0 0 14px rgba(255,170,70,.55), 0 2px 0 rgba(0,0,0,.4);
+}
+.eventbar.season p { color: #f6ddc6; max-width: 46ch; }
+.eventbar.season .facts {
+  display: flex; gap: 14px; flex-wrap: wrap; list-style: none;
+  margin: 9px 0 0; padding: 0;
+}
+.eventbar.season .facts li { display: flex; flex-direction: column; }
+.eventbar.season .facts b {
+  font-size: 15px; color: var(--halloween-glow); line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.eventbar.season .facts span {
+  font-size: 9px; text-transform: uppercase; letter-spacing: .6px; color: #d9b9d6;
+}
+.eventbar.season .eventside {
+  /* a fixed column rather than a flexible one: the copy should take the
+     slack, not the countdown */
+  flex: 0 0 auto; display: flex; flex-direction: column; gap: 8px;
+  align-items: stretch; width: 288px; max-width: 100%;
+}
+.eventbar.season .unit {
+  background: rgba(10,4,18,.55); border-color: rgba(255,180,90,.3);
+}
+.eventbar.season .unit b { color: var(--halloween-glow); }
+.eventbar.season .unit span { color: #d9b9d6; }
+.eventbar.season .btn.treat {
+  background: linear-gradient(#ffa33d, #d4590f);
+  border-color: #8c3405; color: #2a1200; text-shadow: 0 1px 0 rgba(255,255,255,.35);
+  box-shadow: 0 0 0 1px rgba(255,190,120,.35) inset, 0 0 16px rgba(255,140,40,.45);
+}
+.eventbar.season .btn.treat:hover {
+  background: linear-gradient(#ffb75c, #e2650f);
+  box-shadow: 0 0 0 1px rgba(255,210,150,.5) inset, 0 0 26px rgba(255,150,50,.7);
+}
+.eventbar.season .treats { display: flex; gap: 6px; }
+.eventbar.season .treat-item {
+  flex: 1 1 0; min-width: 0; text-decoration: none; text-align: center;
+  border: 1px solid rgba(255,180,90,.28); border-radius: 4px; padding: 4px 3px 5px;
+  background: rgba(10,4,18,.42);
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+}
+.eventbar.season .treat-item:hover {
+  transform: translateY(-3px); border-color: rgba(255,200,120,.7);
+  box-shadow: 0 6px 16px rgba(0,0,0,.45), 0 0 14px rgba(255,150,50,.35);
+}
+.eventbar.season .treat-item canvas {
+  width: 100%; height: auto; aspect-ratio: 1 / 1; display: block;
+}
+.eventbar.season .treat-item span {
+  display: block; font-size: 8px; color: #f2d3b4; margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .eventbar.season { min-height: 0; }
+  .eventbar.season .inner { flex-direction: column; padding: 12px 12px 14px; }
+  /* the shared .tagline rule carries flex-basis 240px, which in a column
+     becomes 240px of dead height once the direction flips */
+  .eventbar.season .tagline { flex: 0 0 auto; }
+  .eventbar.season .eventside { min-width: 0; width: 100%; }
+  .eventbar.season h2 { font-size: 19px; }
+  .eventbar.season p { font-size: 11px; }
+  .eventbar.season .moon { width: 40px; height: 40px; right: 5%; top: 8px; }
+  .eventbar.season .countdown { justify-content: space-between; }
+  .eventbar.season .unit { flex: 1 1 0; min-width: 0; }
+  /* the scenery keeps running but sits behind the text rather than beside it */
+  .eventbar.season .hills, .eventbar.season .fence,
+  .eventbar.season .lantern, .eventbar.season .mist { opacity: .5; }
+}
+
 .spotgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .spotcard {
   border: 1px solid var(--line-soft); border-radius: 4px; background: var(--panel-alt);
@@ -1001,6 +1426,90 @@ dl.stats.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @keyframes popin { from { transform: scale(.9) translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
 .modal-actions .btn { min-width: 92px; text-align: center; }
+
+/* --------------------------------------------------- the item preview stage */
+.peek-stage {
+  position: relative; margin: 0 auto; width: 100%; max-width: 260px;
+  aspect-ratio: 1 / 1; border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--line-soft); background: var(--tile-normal);
+}
+.peek-stage.unusual { background: var(--tile-unusual); border-color: var(--unusual); }
+.peek-stage canvas { display: block; width: 100%; height: 100%; }
+.peek-effect {
+  position: absolute; left: 6px; right: 6px; bottom: 6px; text-align: center;
+  font-size: 10px; font-weight: bold; letter-spacing: .4px;
+  padding: 2px 6px; border-radius: 3px;
+  background: rgba(30,10,50,.74); color: #e8d5ff;
+}
+
+/* ------------------------------------------------------ admin social graph */
+.graphwrap {
+  position: relative; width: 100%; height: 460px;
+  background:
+    radial-gradient(circle at 30% 20%, var(--panel-alt), var(--sunken) 70%);
+  border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft);
+  overflow: hidden;
+}
+#graph-canvas {
+  display: block; width: 100%; height: 100%; cursor: grab; touch-action: none;
+}
+#graph-canvas:active { cursor: grabbing; }
+.graph-empty {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; color: var(--ink-soft); font-size: 12px;
+  pointer-events: none; text-align: center; padding: 20px;
+}
+.graph-key {
+  position: absolute; left: 10px; top: 10px; max-width: 46%;
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 7px 9px; border-radius: 5px; font-size: 10px;
+  background: var(--bg-veil); border: 1px solid var(--line-soft);
+  color: var(--ink); backdrop-filter: blur(3px);
+}
+.graph-key b { font-size: 10px; color: var(--ink-strong); margin-bottom: 1px; }
+.graph-key span { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.graph-key i {
+  width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto;
+  border: 1px solid var(--panel);
+}
+.graph-key .k-admin { background: #c4281c; }
+.graph-key .k-online { background: #3f9f45; }
+.graph-key .k-hub { background: #1f8f70; }
+.graph-key .k-node { background: #2f6f9f; }
+.graph-key .k-edge {
+  border-radius: 0; height: 2px; border: 0; background: rgba(60,100,140,.7);
+}
+.graph-key .k-pending {
+  border-radius: 0; height: 0; border: 0; width: 10px;
+  border-top: 2px dashed rgba(190,130,40,.9);
+}
+.graph-card {
+  position: absolute; right: 10px; top: 10px; width: 190px;
+  padding: 9px 10px; border-radius: 5px; font-size: 11px;
+  background: var(--panel); border: 1px solid var(--line);
+  box-shadow: 0 8px 22px var(--shadow-lift); color: var(--ink);
+}
+.graph-card b { color: var(--ink-strong); font-size: 12px; }
+.graph-card .tiny { font-size: 10px; margin-top: 2px; }
+
+:root[data-theme="dark"] .graph-key .k-admin { background: #e0574f; }
+:root[data-theme="dark"] .graph-key .k-online { background: #7ede7a; }
+:root[data-theme="dark"] .graph-key .k-hub { background: #4fc3a1; }
+:root[data-theme="dark"] .graph-key .k-node { background: #6f9fd0; }
+
+@media (max-width: 700px) {
+  /* Portrait: taller than it is wide, so a mesh still has room to spread,
+     and the key folds into a strip along the bottom rather than covering
+     half the drawing. */
+  .graphwrap { height: 70vh; max-height: 560px; }
+  .graph-key {
+    left: 8px; right: 8px; top: auto; bottom: 8px; max-width: none;
+    flex-direction: row; flex-wrap: wrap; gap: 4px 10px; align-items: center;
+  }
+  .graph-key b { margin: 0; }
+  .graph-key .tiny { flex-basis: 100%; }
+  .graph-card { right: 8px; left: 8px; width: auto; }
+}
 
 /* ------------------------------------------------------------ message inbox */
 .msglist { border-top: 1px solid var(--line-soft); }
@@ -1104,10 +1613,56 @@ dl.stats.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .pinrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
 .pinrow .item .thumb-wrap { aspect-ratio: 1 / 1; }
 .pinslot {
-  border: 1px dashed var(--line); border-radius: 4px; background: var(--panel-alt);
-  display: flex; align-items: center; justify-content: center; text-align: center;
-  color: var(--ink-soft); font-size: 10px; padding: 10px 6px; aspect-ratio: 1 / 1;
+  position: relative; border: 1px dashed var(--line); border-radius: 4px;
+  background: var(--panel-alt);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; color: var(--ink-soft); font-size: 10px; padding: 10px 6px;
+  aspect-ratio: 1 / 1; overflow: hidden;
+  transition: border-color .14s ease, background .14s ease, transform .14s ease;
 }
+/* a filled slot stops being a dashed placeholder and becomes the item */
+.pinslot.filled {
+  border-style: solid; padding: 0; cursor: grab; touch-action: none;
+  background: var(--panel);
+}
+.pinslot.filled:active { cursor: grabbing; }
+.pinslot .slot-n {
+  position: absolute; left: 4px; top: 3px; z-index: 2;
+  font-size: 9px; font-weight: bold; color: var(--ink-soft);
+  background: var(--bg-veil); border-radius: 2px; padding: 0 4px;
+}
+.pinslot .slot-hint { max-width: 90%; }
+.pinslot .slot-clear {
+  position: absolute; right: 3px; top: 2px; z-index: 3;
+  width: 18px; height: 18px; line-height: 1; padding: 0;
+  border: 1px solid var(--line-soft); border-radius: 50%;
+  background: var(--panel); color: var(--ink-soft); cursor: pointer;
+  font-size: 13px; opacity: 0; transition: opacity .14s ease;
+}
+.pinslot.filled:hover .slot-clear { opacity: 1; }
+.pinslot .thumb-wrap { width: 100%; }
+.pinslot .meta { padding: 3px 5px 5px; width: 100%; }
+/* the drop target under the pointer */
+.pinslot.over {
+  border-color: var(--link); border-style: solid;
+  background: var(--info-bg); transform: scale(1.04);
+  box-shadow: 0 0 0 2px var(--focus);
+}
+.slotpick.over {
+  outline: 2px dashed var(--link); outline-offset: 3px; border-radius: 4px;
+}
+/* pool tiles are drag handles too */
+#pin-pool .pick { touch-action: none; cursor: grab; }
+#pin-pool .pick:active { cursor: grabbing; }
+/* the thing that follows the pointer */
+.pin-ghost {
+  position: fixed; z-index: 1200; pointer-events: none; margin: -50% 0 0 -50%;
+  opacity: .92; transform: rotate(-3deg) scale(1.04);
+  box-shadow: 0 10px 26px var(--shadow-lift);
+  border-radius: 4px; overflow: hidden;
+}
+/* no text selection while something is in flight */
+body.pin-dragging { user-select: none; -webkit-user-select: none; }
 
 /* ---------------------------------------------------------------- responsive
    Phone layout.  The site is a companion to the game here: messaging,
@@ -1179,6 +1734,14 @@ dl.stats.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .dock-panel { width: calc(100vw - 20px); max-height: 66vh; }
   .modal-scrim { align-items: flex-end; padding: 0; }
   .modal-scrim .panel { width: 100%; border-radius: 8px 8px 0 0; max-height: 86vh; }
+  /* A confirm is a bottom sheet because your thumb is down there.  The item
+     preview is something you look at, so it sits in the middle of the screen
+     with air around it instead. */
+  .modal-scrim.peek-modal { align-items: center; padding: 18px 14px; }
+  .modal-scrim.peek-modal .panel {
+    width: 100%; max-width: 380px; border-radius: 6px; max-height: 88vh;
+  }
+  .peek-stage { max-width: 216px; }
   .footer { margin-bottom: 74px; }
   .hero .inner { padding: 16px; }
   .hero h1 { font-size: 21px; }
@@ -1207,6 +1770,10 @@ dl.stats.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 @media (prefers-reduced-motion: reduce) {
   .ticker-track, .item.tier-unusual::after, .hero .cloud, .eventbar .glow,
-  .dot.on, .dot.game { animation: none !important; }
+  .dot.on, .dot.game,
+  .eventbar.season .scene *, .eventbar.season .scene,
+  .hero-stage .orb, .hero-stage .beam { animation: none !important; }
+  /* the bats would otherwise sit frozen mid-flight in the middle of the sky */
+  .eventbar.season .bats { display: none; }
   * { transition-duration: .01ms !important; }
 }

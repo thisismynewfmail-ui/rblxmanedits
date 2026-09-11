@@ -1,40 +1,64 @@
 {% include "partials/head.html" %}
-<div class="eventbar" data-countdown="{{ spotlight_left }}">
-  <span class="glow"></span>
-  <div class="inner">
-    <div class="tagline">
-      <span class="kicker">{{ spotlight.kicker }}</span>
-      <h2>{{ spotlight.title }}</h2>
-      <p>{{ spotlight.blurb }}</p>
+{% include "partials/eventbar.html" %}
+
+<!-- ======================================================= the welcome ====
+     One character, rolled fresh on every load: random build, random pose,
+     random cosmetics, occasionally Unusual.  It is the real rig rendered by
+     the real engine, so what a visitor sees on the front page is exactly
+     what they get when they sign up.  Everything around it is live data. -->
+<section class="hero-stage" id="hero-stage">
+  <span class="grid-floor" aria-hidden="true"></span>
+  <span class="beam" aria-hidden="true"></span>
+  <span class="orb o1" aria-hidden="true"></span>
+  <span class="orb o2" aria-hidden="true"></span>
+  <span class="orb o3" aria-hidden="true"></span>
+
+  <div class="hero-copy">
+    <h1><span class="l">Build it.</span> <span class="l">Play it.</span> <span class="l">Live it.</span></h1>
+    <p class="lede">{{ SITE_NAME }} is a block world platform. Make a character out of
+      coloured bricks, buy hats with a <b class="pop">0.5%</b> chance of coming out
+      <b class="uw">Unusual</b>, then drop into a first or third person shooter world
+      with your friends.</p>
+
+    <div class="hero-cta">
+      <a class="btn go big" href="/register">Create a free account</a>
+      <a class="btn big ghost" href="/worlds">Browse the worlds</a>
     </div>
-    <div class="countdown" aria-label="Time left in this spotlight">
-      <div class="unit"><b data-cd="d">0</b><span>days</span></div>
-      <div class="unit"><b data-cd="h">0</b><span>hrs</span></div>
-      <div class="unit"><b data-cd="m">0</b><span>min</span></div>
-      <div class="unit"><b data-cd="s">0</b><span>sec</span></div>
-    </div>
-    <a class="btn go" href="{{ spotlight.href }}">{{ spotlight.cta }}</a>
+
+    <ul class="hero-stats">
+      <li><b>{{ fmt_num(site_stats.users) }}</b><span>builders</span></li>
+      <li><b>{{ fmt_num(site_stats.visits) }}</b><span>place visits</span></li>
+      <li><b>{{ len(worlds) }}</b><span>worlds</span></li>
+      <li><b>{{ fmt_num(site_stats.unusuals) }}</b><span>Unusuals found</span></li>
+    </ul>
   </div>
-</div>
-<div class="hero">
-  <div class="cloud" style="width:160px;height:34px;top:22px;animation-duration:52s"></div>
-  <div class="cloud" style="width:110px;height:26px;top:74px;animation-duration:38s;animation-delay:-12s"></div>
-  <div class="cloud" style="width:200px;height:40px;top:120px;animation-duration:64s;animation-delay:-30s"></div>
-  <div class="inner row">
-    <div class="col">
-      <h1>Build it. Play it. Live it.</h1>
-      <p>{{ SITE_NAME }} is a block world platform: make an avatar out of coloured bricks,
-         buy hats with a tiny chance of being <b style="color:#c78bff">Unusual</b>, then drop into
-         a first or third person shooter world with your friends.</p>
-      <p style="margin-top:12px">
-        <a class="btn go big" href="/register">Create a free account</a>
-        <a class="btn big" href="/worlds">Browse the worlds</a>
-      </p>
+
+  <div class="hero-figure">
+    <div class="avatar-view" id="hero-avatar" data-avatar="{{ to_json(hero) }}"
+         data-hero-pose="{{ hero.pose }}" data-sky="dark">
+      <span class="hint">drag to spin</span>
     </div>
-    <div class="col-narrow">
-      <div class="avatar-view" style="height:220px" data-avatar-demo="male"></div>
-      <div class="avatar-view" style="height:150px;margin-top:8px" data-avatar-demo="female"></div>
+    <div class="hero-tools">
+      <button type="button" class="btn small" id="hero-reroll"
+              title="Roll another character">&#8635; Roll another</button>
+      <span class="hero-caption" id="hero-caption"></span>
     </div>
+  </div>
+</section>
+
+<!-- On a phone the numbers belong under the hero rather than a column away,
+     so this is the mobile home for Site statistics. -->
+<div class="panel only-mobile" style="margin-bottom:12px">
+  <div class="panel-head gold">Site statistics</div>
+  <div class="panel-body">
+    <dl class="stats">
+      <div><dt>Builders</dt><dd>{{ fmt_num(site_stats.users) }}</dd></div>
+      <div><dt>Visits</dt><dd>{{ fmt_num(site_stats.visits) }}</dd></div>
+      <div><dt>Items owned</dt><dd>{{ fmt_num(site_stats.items_owned) }}</dd></div>
+      <div><dt>Posts</dt><dd>{{ fmt_num(site_stats.posts) }}</dd></div>
+      <div><dt>Friendships</dt><dd>{{ fmt_num(site_stats.friendships) }}</dd></div>
+      <div><dt>Unusuals</dt><dd>{{ fmt_num(site_stats.unusuals) }}</dd></div>
+    </dl>
   </div>
 </div>
 
@@ -68,7 +92,7 @@
   </div>
 
   <div class="col-side">
-    <div class="panel">
+    <div class="panel no-mobile">
       <div class="panel-head gold">Site statistics</div>
       <div class="panel-body">
         <dl class="stats">

@@ -114,7 +114,13 @@ class Dashboard:
         self.started = time.time()
         self.last_requests = 0
         self.last_sample = time.time()
+        # The first sample has nothing to compare against, so its "rate" is
+        # the whole count divided by a fraction of a second.  Suppress it.
+        self.sampled = False
         self.events: List[str] = []
+        # how many lines the last block took, so the next one can walk the
+        # cursor back over it instead of scrolling
+        self._last_height = 0
         self._lock = threading.RLock()
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
@@ -165,9 +171,10 @@ class Dashboard:
         requests = getattr(self.app, "request_count", 0)
         sockets = getattr(self.app, "ws_count", 0)
         elapsed = max(0.001, now - self.last_sample)
-        rate = (requests - self.last_requests) / elapsed
+        rate = (requests - self.last_requests) / elapsed if self.sampled else 0.0
         self.last_requests = requests
         self.last_sample = now
+        self.sampled = True
 
         try:
             stats = feed.stats_snapshot()
@@ -232,104 +239,124 @@ class Dashboard:
 
     # -------------------------------------------------------------- rendering
     def render(self) -> None:
-        sys.stdout.write(self.block())
-        sys.stdout.flush()
+        """Draw the block, in place when we are attached to a terminal.
+
+        Printing a fresh block every few seconds turns a long session into
+        thousands of screens of scrollback and makes the numbers hard to
+        follow -- your eye has to find the new copy each time.  On a terminal
+        the cursor is walked back over the previous block and the area
+        cleared, so the read-out updates where it stands, the way top does,
+        and everything printed before it (the banner, the host start-up
+        lines) stays put above.  Piped to a file there is no cursor to move,
+        so it falls back to appending.
+        """
+        text = self.block()
+        out = sys.stdout
+        if _COLOR and self._last_height:
+            # up N lines, then erase from the cursor to the end of the screen
+            out.write("\033[%dA\033[J" % self._last_height)
+        self._last_height = text.count("\n")
+        out.write(text)
+        out.flush()
 
     def block(self) -> str:
         width, height = term_size()
         data = self.snapshot()
-        # A narrow window (a phone-shaped SSH session, a vertical monitor,
-        # a split pane) gets the stacked layout instead of the table.
-        narrow = width < 72
-        lines: List[str] = [""]
-        lines.append(rule(width, "="))
-        title = " BLOCKHAVEN  %s  " % time.strftime("%H:%M:%S")
-        lines.append(bold(cyan(title)) + dim("up " + human_time(data["uptime"])))
-        lines.append(rule(width, "="))
+        # Everything is sized to fit a portrait terminal, so the wide layout
+        # is the exception rather than the default: two columns of figures
+        # only when there is genuinely room for them.
+        inner = min(width, 78)
+        narrow = inner < 62
+        lines: List[str] = []
+        lines.append(rule(inner, "="))
+        head = " BLOCKHAVEN " + time.strftime("%H:%M:%S")
+        tail = "up " + human_time(data["uptime"]) + " "
+        pad = max(1, inner - len(head) - len(tail))
+        lines.append(bold(cyan(head)) + " " * pad + dim(tail))
+        lines.extend(self._section_traffic(data, inner, narrow))
+        lines.extend(self._section_worlds(data, inner, narrow))
+        lines.extend(self._section_hosts(data, inner, narrow))
 
-        lines.extend(self._section_traffic(data, width, narrow))
-        lines.extend(self._section_worlds(data, width, narrow))
-        lines.extend(self._section_hosts(data, width, narrow))
-
-        # Events fill whatever room is left, so a short window drops them
-        # rather than scrolling the numbers off the top.
-        used = len(lines) + 3
-        room = max(0, height - used)
-        if room >= 2:
-            events = self._drain_events(min(room - 1, 6))
+        # Events take whatever room is left over.  The block has a hard
+        # ceiling of the window height so the in-place redraw above can
+        # always walk back over it.
+        fixed = len(lines) + 3
+        room = max(0, min(4, height - fixed - 2))
+        if room:
+            events = self._drain_events(room)
             if events:
-                lines.append("")
-                lines.append(bold("Recent"))
+                lines.append(rule(inner))
                 for row in events:
-                    lines.append("  " + dim(row[:width - 2]))
-        lines.append(rule(width))
-        lines.append(dim("  http://%s:%d/   Ctrl+C to stop" % (self.address, self.port)))
-        lines.append("")
+                    lines.append(" " + dim(row[:inner - 1]))
+        lines.append(rule(inner, "="))
+        lines.append(dim(" http://%s:%d/  \u00b7  Ctrl+C to stop"
+                         % (self.address, self.port)))
+        # never taller than the window, or the cursor walk-back overshoots
+        if len(lines) > height - 1:
+            lines = lines[:height - 1]
         return "\n".join(lines) + "\n"
+
+    def _grid(self, pairs: List[Tuple[str, str]], width: int,
+              narrow: bool) -> List[str]:
+        """Key/value figures, two columns wide and one column narrow."""
+        if narrow:
+            return [" %-7s %s" % (key, value[:width - 10]) for key, value in pairs]
+        column = (width - 2) // 2
+        lines = []
+        half = (len(pairs) + 1) // 2
+        for index in range(half):
+            key, value = pairs[index]
+            cell = ("%-7s %s" % (key, value))[:column - 1]
+            row = " " + cell.ljust(column - 1) + " "
+            if index + half < len(pairs):
+                key, value = pairs[index + half]
+                row += ("%-7s %s" % (key, value))[:column - 1]
+            lines.append(row.rstrip()[:width])
+        return lines
 
     def _section_traffic(self, data: Dict[str, Any], width: int,
                          narrow: bool) -> List[str]:
+        # Short keys, compact values: this block is read at a glance, not
+        # studied, and every character spent on a label is one not spent on
+        # a number.
         pairs = [
-            ("requests", "%s  (%.1f/s)" % (f"{data['requests']:,}", data["rate"])),
-            ("sockets", str(data["sockets"])),
-            ("threads", str(data["threads"])),
-            ("accounts", f"{data['accounts']:,}"),
-            ("online", "%d on the site, %d in game" % (data["online"], data["in_game"])),
-            ("items", "%s owned, %s Unusual" % (f"{data['items']:,}",
-                                                f"{data['unusuals']:,}")),
+            ("req", "%s %s" % (f"{data['requests']:,}",
+                               dim("%.1f/s" % data["rate"]))),
+            ("ws", str(data["sockets"])),
+            ("thr", str(data["threads"])),
+            ("db", human_bytes(data["db_bytes"])),
+            ("accts", f"{data['accounts']:,}"),
+            ("online", "%d site %s %d game"
+             % (data["online"], dim("\u00b7"), data["in_game"])),
+            ("items", "%s %s %s unu" % (f"{data['items']:,}", dim("\u00b7"),
+                                        f"{data['unusuals']:,}")),
             ("visits", f"{data['visits']:,}"),
-            ("database", human_bytes(data["db_bytes"])),
         ]
-        lines = [bold("Server")]
-        if narrow:
-            for key, value in pairs:
-                lines.append("  %-10s %s" % (key, value))
-        else:
-            half = (len(pairs) + 1) // 2
-            column = max(28, (width - 4) // 2)
-            for index in range(half):
-                left = pairs[index]
-                cell = "%-9s %s" % (left[0], left[1])
-                row = "  " + cell.ljust(column)
-                if index + half < len(pairs):
-                    right = pairs[index + half]
-                    row += "%-9s %s" % (right[0], right[1])
-                lines.append(row[:width])
-        return lines
+        return [rule(width)] + self._grid(pairs, width, narrow)
 
     def _section_worlds(self, data: Dict[str, Any], width: int,
                         narrow: bool) -> List[str]:
         rows = data["worlds"]
         if not rows:
             return []
-        lines = ["", bold("Worlds")]
-        if narrow:
-            for row in rows:
-                flag = green("up") if row["online"] else red("down")
-                lines.append("  %s  %s" % (row["name"][:width - 8], flag))
-                lines.append("    %s %d/%d players, %d instance%s, %d ms tick"
-                             % (bar(row["players"], max(1, row["capacity"]), 10),
-                                row["players"], row["capacity"], row["instances"],
-                                "" if row["instances"] == 1 else "s",
-                                row["tick_ms"]))
-        else:
-            name_w = max(14, min(22, width - 48))
-            meter_w = max(5, min(12, width - name_w - 42))
-            # the meter plus " nn/nn" is what sets the players column width
-            players_w = meter_w + 8
-            head = "  %-*s %-*s %-9s %-7s %s" % (name_w, "world", players_w,
-                                                 "players", "instances",
-                                                 "tick", "state")
-            lines.append(dim(head[:width]))
-            for row in rows:
-                meter = bar(row["players"], max(1, row["capacity"]), meter_w)
-                state = green("running") if row["online"] else red("offline")
-                players = "%s %d/%d" % (meter, row["players"], row["capacity"])
-                lines.append("  %-*s %-*s %-9s %-7s %s"
-                             % (name_w, row["name"][:name_w],
-                                players_w, players,
-                                str(row["instances"]),
-                                "%dms" % row["tick_ms"], state))
+        lines = [rule(width)]
+        # One line per world whatever the width: the name, a meter, the count
+        # and the tick.  A header row costs a line and says nothing the
+        # columns do not.
+        meter_w = 10 if width >= 58 else 6
+        # capped, so a wide window puts the meters near the names instead of
+        # stranding them on the far side of the screen
+        name_w = max(10, min(22, width - meter_w - 24))
+        for row in rows:
+            meter = bar(row["players"], max(1, row["capacity"]), meter_w)
+            state = green("up") if row["online"] else red("DOWN")
+            line = " %-*s %s %s %s" % (
+                name_w, row["name"][:name_w], meter,
+                "%2d/%-2d" % (row["players"], row["capacity"]),
+                dim("%di %dms" % (row["instances"], row["tick_ms"])))
+            # the state flag is appended last so the colour codes do not
+            # throw the column padding out
+            lines.append(line + " " + state)
         return lines
 
     def _section_hosts(self, data: Dict[str, Any], width: int,
@@ -339,18 +366,14 @@ class Dashboard:
             return []
         alive = sum(1 for h in hosts if h.get("alive"))
         restarts = sum(int(h.get("restarts", 0)) for h in hosts)
-        summary = "%d/%d host processes alive" % (alive, len(hosts))
+        summary = "hosts %d/%d alive" % (alive, len(hosts))
         if restarts:
             summary += ", %d restart%s" % (restarts, "" if restarts == 1 else "s")
-        lines = ["", bold("Hosts"), "  " + (green(summary) if alive == len(hosts)
-                                            else yellow(summary))]
-        if not narrow:
-            for host in hosts:
-                lines.append("    %-18s pid %-7s port %-6s up %s"
-                             % (str(host.get("world", ""))[:18],
-                                host.get("pid", "-"), host.get("port", "-"),
-                                human_time(host.get("uptime", 0))))
-        return lines
+        pids = " ".join(str(h.get("pid", "-")) for h in hosts)
+        if width - len(summary) - 8 > len(pids):
+            summary += "  " + dim("pid " + pids)
+        return [rule(width),
+                " " + (green(summary) if alive == len(hosts) else yellow(summary))]
 
     # ------------------------------------------------------------- start-up
     def intro(self, world_rows: List[Dict[str, Any]], admin: Tuple[str, str],

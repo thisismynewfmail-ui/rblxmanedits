@@ -1,0 +1,80 @@
+<!-- The seasonal event strip.  When a season is running this is a whole
+     animated scene; the rest of the year it falls back to the plain weekly
+     spotlight, so the top of the page is never empty and never lies about
+     what is on. -->
+{% if event %}
+<section class="eventbar season {{ event.scene }}" data-countdown="{{ event.seconds_left }}"
+         aria-label="{{ event.title }} event">
+  <!-- Scenery.  All of it is CSS animation on empty elements: no images,
+       nothing to download, and it goes still under prefers-reduced-motion. -->
+  <div class="scene" aria-hidden="true">
+    <span class="moon"></span>
+    <span class="stars"></span>
+    <span class="cloudband a"></span>
+    <span class="cloudband b"></span>
+    <span class="bats"><i></i><i></i><i></i><i></i><i></i></span>
+    <span class="hills far"></span>
+    <span class="hills near"></span>
+    <span class="fence"></span>
+    <span class="lantern l1"><i class="flame"></i></span>
+    <span class="lantern l2"><i class="flame"></i></span>
+    <span class="lantern l3"><i class="flame"></i></span>
+    <span class="mist"></span>
+  </div>
+
+  <div class="inner">
+    <div class="tagline">
+      <span class="kicker"><span class="pipkin">&#127875;</span> {{ event.kicker }}</span>
+      <h2>{{ event.title }}</h2>
+      <p>{{ event.blurb }}</p>
+      <ul class="facts">
+        {% for f in event.facts %}
+        <li><b>{{ f[0] }}</b><span>{{ f[1] }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="eventside">
+      <div class="countdown" aria-label="Time left in this event">
+        <div class="unit"><b data-cd="d">0</b><span>days</span></div>
+        <div class="unit"><b data-cd="h">0</b><span>hrs</span></div>
+        <div class="unit"><b data-cd="m">0</b><span>min</span></div>
+        <div class="unit"><b data-cd="s">0</b><span>sec</span></div>
+      </div>
+      <a class="btn go big treat" href="{{ event.href }}">{{ event.cta }}</a>
+      <!-- The three seasonal hats, rendered with the same 3D pipeline the
+           market uses, so this is the actual item and not a picture of it. -->
+      <div class="treats">
+        {% for t in event_items %}
+        <a class="treat-item" href="/market?tag={{ event.tag }}" title="{{ t.name }}"
+           data-item-peek="{{ t.id }}" data-name="{{ t.name }}"
+           data-slot-label="{{ t.slot_label }}" data-rarity="{{ t.rarity }}"
+           data-price="{{ t.price }}" data-href="/market?tag={{ event.tag }}">
+          <canvas class="thumb item-thumb" width="128" height="128"
+                  data-item="{{ t.id }}"></canvas>
+          <span>{{ t.name }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+{% else %}
+<section class="eventbar" data-countdown="{{ spotlight_left }}">
+  <span class="glow"></span>
+  <div class="inner">
+    <div class="tagline">
+      <span class="kicker">{{ spotlight.kicker }}</span>
+      <h2>{{ spotlight.title }}</h2>
+      <p>{{ spotlight.blurb }}</p>
+    </div>
+    <div class="countdown" aria-label="Time left in this spotlight">
+      <div class="unit"><b data-cd="d">0</b><span>days</span></div>
+      <div class="unit"><b data-cd="h">0</b><span>hrs</span></div>
+      <div class="unit"><b data-cd="m">0</b><span>min</span></div>
+      <div class="unit"><b data-cd="s">0</b><span>sec</span></div>
+    </div>
+    <a class="btn go" href="{{ spotlight.href }}">{{ spotlight.cta }}</a>
+  </div>
+</section>
+{% endif %}

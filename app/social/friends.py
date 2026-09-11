@@ -121,6 +121,51 @@ def list_friends(user_id: int, limit: int = 100) -> List[Dict[str, Any]]:
     return db.rows_to_dicts(rows)
 
 
+def graph(limit: int = 400) -> Dict[str, Any]:
+    """Every accepted friendship as a node/edge list, for the admin graph.
+
+    Returned flat rather than nested so the client can lay it out however it
+    likes; the degree is counted here because the database can do it in one
+    pass and the browser would need a second one.
+    """
+    edges = db.rows_to_dicts(db.query(
+        "SELECT user_low, user_high FROM friendships WHERE status='accepted'"
+        " ORDER BY updated_at DESC LIMIT ?", (limit,)))
+    ids = set()
+    for row in edges:
+        ids.add(int(row["user_low"]))
+        ids.add(int(row["user_high"]))
+    pending = db.rows_to_dicts(db.query(
+        "SELECT user_low, user_high FROM friendships WHERE status='pending'"
+        " ORDER BY updated_at DESC LIMIT ?", (limit,)))
+    for row in pending:
+        ids.add(int(row["user_low"]))
+        ids.add(int(row["user_high"]))
+
+    people: List[Dict[str, Any]] = []
+    if ids:
+        marks = ",".join("?" * len(ids))
+        people = db.rows_to_dicts(db.query(
+            "SELECT id, username, is_admin, last_seen, credits, created_at"
+            " FROM users WHERE id IN (%s)" % marks, tuple(ids)))
+    degree: Dict[int, int] = {}
+    for row in edges:
+        for key in ("user_low", "user_high"):
+            uid = int(row[key])
+            degree[uid] = degree.get(uid, 0) + 1
+    return {
+        "nodes": [{"id": int(p["id"]), "name": p["username"],
+                   "admin": bool(p["is_admin"]),
+                   "last_seen": int(p["last_seen"] or 0),
+                   "friends": degree.get(int(p["id"]), 0)}
+                  for p in people],
+        "edges": [{"a": int(r["user_low"]), "b": int(r["user_high"]),
+                   "pending": False} for r in edges] +
+                 [{"a": int(r["user_low"]), "b": int(r["user_high"]),
+                   "pending": True} for r in pending],
+    }
+
+
 def count_friends(user_id: int) -> int:
     return int(db.scalar(
         "SELECT COUNT(*) FROM friendships WHERE status='accepted'"

@@ -143,7 +143,7 @@ app/
     catalog.py             THE item catalogue (hats, faces, clothing, weapons,
                            tiers and Unusual particle effects)
     users.py avatars.py inventory.py economy.py market.py worlds.py
-    events.py              the weekly home-page spotlight rotation
+    events.py              seasonal events + the weekly spotlight rotation
   social/
     friends.py follows.py posts.py comments.py messages.py feed.py
   views/                   one module per area of the site
@@ -160,7 +160,8 @@ static/
   js/engine/               WebGL renderer, geometry, textures, avatar rig,
                            particles, synthesised audio
   js/game/                 client, netcode, physics, HUD, settings
-  js/ui/                   site behaviour, 3D thumbnails, per-page scripts
+  js/ui/                   site behaviour, 3D thumbnails, the admin social
+                           graph, per-page scripts
   css/                     site.css (Web 1.0 chrome, light + dark palettes and
                            the phone layout) and game.css (HUD)
 templates/                 server-rendered pages
@@ -201,6 +202,12 @@ and the supervisor restarts any host that dies.
 * **Admin actions** run through exactly the same code paths (`economy.adjust`,
   `inventory.grant`) as normal play, so the dashboard cannot create state the
   game itself could not.
+* **One live session per account.** Joining a world pulls the player out of
+  wherever they already are first — synchronously inside the host for the same
+  world, and over a signed loopback control channel on the host's own port for
+  a different one, the same trust model the hosts use to call back into the web
+  server. A second window gets the world; the first gets a "Session ended"
+  card rather than a socket that silently dies.
 
 ---
 
@@ -235,11 +242,38 @@ grooves; the arms are rectangular in section rather than square posts; and the
 head is wider than it is tall, sat down on the shoulders.
 
 **Two body types** ship, `male` and `female`. They differ only from the neck
-down: the female build has narrower shoulders, a cinched waist, flared hips and
-slimmer limbs. Head, neck, the hat anchor at the top of the head and the
+down. The male build is a slim, straight silhouette; the female is a genuine
+hourglass -- 1.46 across the chest, 1.10 at the waist and 1.66 at the hip, with
+the waist as the tall segment so the narrow part reads as a long line, a chest
+that stands a quarter of a unit proud in profile, and a higher hip line for a
+longer leg. Head, neck, the hat anchor at the top of the head and the
 hitbox are identical for both, which is what guarantees every hat, face, shirt,
 pair of trousers and back item fits either build with no per-type variant.
 Switching build in the avatar editor never costs you an outfit.
+
+The torso is a stack of rounded boxes, and the interesting constraint is that a
+rounded box is always narrowest at its top and bottom. Any real horizontal
+radius therefore makes each segment bulge in the middle and a stack of them
+comes out corrugated, like a pile of tyres. The `rtorso` bake leaves the sides
+vertical and spends its rounding front to back instead, which puts the whole
+silhouette in the segment widths where it can actually be controlled.
+
+## Events
+
+A seasonal event takes the top of the home page while it is running, and the
+weekly spotlight rotation takes it the rest of the year. **Hollow Harvest**
+runs from 1 September to 2 November: an animated night scene built entirely
+from CSS on empty elements -- drifting cloud bands, a moon with a breathing
+corona, bats crossing the sky, silhouette hills, a picket fence and
+jack-o'-lanterns whose carved faces flicker -- with a countdown, the three
+seasonal hats rendered live by the same 3D pipeline the market uses, and a
+button through to the collection. The window is a month/day pair rather than a
+date, so it comes back every year without anybody editing anything.
+
+The collection itself is five ordinary catalogue items (`hat_jack`,
+`hat_witch`, `hat_bones`, `face_hollow`, `back_spider`) carrying a `tag`. Same
+prices, same Unusual odds, on sale all year -- the tag only groups them so
+`/market?tag=halloween` has an aisle to show.
 
 ## Appearance and privacy
 
@@ -284,6 +318,10 @@ restaurant without building one first.
 asserts on what the servers broadcast: flag captures, damage and the kill feed,
 fire-rate clamping, movement correction, cart pushing, tycoon buying and
 income, instance overflow, visit accounting and the end-of-round shuffle vote.
+Each bot gets an account of its own -- the platform allows one live game
+session per account, so two bots sharing one would silently become one -- and
+the suite registers throwaway accounts when it needs more than the ten seeded
+players.
 
 ## Data
 

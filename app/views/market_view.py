@@ -16,13 +16,15 @@ def market_page(req: Request):
     slot = req.query.get("slot", "all")
     sort = req.query.get("sort", "featured")
     term = req.query.get("q", "")
-    items = market.listing(slot, sort, term)
+    tag = req.query.get("tag", "")
+    items = market.listing(slot, sort, term, tag)
     owned = {}
     if req.user:
         for row in inventory.list_for_user(int(req.user["id"])):
             owned[row["item_id"]] = owned.get(row["item_id"], 0) + 1
     return render(req, "market.html", items=items, slot=slot, sort=sort,
-                  term=term, tabs=SLOT_TABS, owned=owned,
+                  term=term, tag=tag, tag_label=catalog.TAG_LABELS.get(tag, ""),
+                  tabs=SLOT_TABS, owned=owned,
                   tiers=catalog.TIERS,
                   unusual_chance=0.5,
                   effects=catalog.UNUSUAL_EFFECTS,

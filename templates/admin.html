@@ -145,6 +145,42 @@
   </div>
 </div>
 
+<!-- ====================================================== social graph ====
+     Every accepted friendship drawn as a force-directed mesh.  It is a
+     genuinely useful admin view: clusters, bridges and isolated accounts are
+     obvious at a glance in a way no table makes them, and a ring of mutual
+     follows around one account is what a bot farm looks like. -->
+<div class="panel" id="graph-panel">
+  <div class="panel-head purple">
+    <span>&#9901; Social graph</span>
+    <span class="head-links">
+      <span id="graph-count">&mdash;</span> &bull;
+      <a href="#" id="graph-key-toggle">hide key</a> &bull;
+      <a href="#" id="graph-freeze">freeze</a>
+    </span>
+  </div>
+  <div class="panel-body flush">
+    <div class="graphwrap">
+      <canvas id="graph-canvas"></canvas>
+      <div class="graph-empty hidden" id="graph-empty">
+        No friendships yet &mdash; the mesh appears as people connect.
+      </div>
+      <div class="graph-key" id="graph-key">
+        <b>Key</b>
+        <span><i class="k-admin"></i> administrator</span>
+        <span><i class="k-online"></i> online now</span>
+        <span><i class="k-hub"></i> 5+ friends</span>
+        <span><i class="k-node"></i> player</span>
+        <span><i class="k-edge"></i> friends</span>
+        <span><i class="k-pending"></i> request pending</span>
+        <span class="tiny muted">drag to pan &bull; scroll to zoom &bull; click a node</span>
+      </div>
+      <div class="graph-card hidden" id="graph-card"></div>
+    </div>
+  </div>
+  <div class="panel-foot"><span class="muted" id="graph-stats">&mdash;</span></div>
+</div>
+
 <div id="admin-modal" class="hidden" style="position:fixed;inset:0;background:rgba(8,16,26,.7);z-index:900;display:flex;align-items:center;justify-content:center">
   <div class="panel" style="width:640px;max-height:86vh;overflow:auto;margin:0">
     <div class="panel-head" id="am-title">Player</div>
@@ -152,5 +188,6 @@
     <div class="panel-foot right"><button class="btn" id="am-close">Close</button></div>
   </div>
 </div>
+<script src="/static/js/ui/graph.js"></script>
 {% set page_script = "/static/js/ui/admin.js" %}
 {% include "partials/foot.html" %}

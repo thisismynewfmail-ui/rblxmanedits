@@ -16,7 +16,7 @@ from ..game import registry as game_registry
 from ..http import router as R
 from ..http.router import Request
 from ..models import avatars, catalog, economy, inventory, users, worlds
-from ..social import comments, feed, posts
+from ..social import comments, feed, friends, posts
 from .base import admin_required, api_error, api_ok, render, router
 
 SUPERVISOR = None  # set by main.py so the dashboard can show host processes
@@ -52,6 +52,10 @@ def _live_payload() -> Dict[str, Any]:
         "hosts": SUPERVISOR.status() if SUPERVISOR else [],
         # NOTE: not called "items" -- that name collides with dict.items in templates
         "item_stats": inventory.global_stats(),
+        # The social graph rides along with the rest of the live payload, so
+        # the network view refreshes on the same three-second beat as the
+        # numbers above it rather than polling on its own.
+        "graph": friends.graph(400),
     }
 
 
