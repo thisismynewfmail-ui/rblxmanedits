@@ -7,7 +7,7 @@
   var DEFAULT_BINDS = {
     forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD',
     jump: 'Space', sprint: 'ShiftLeft', crouch: 'ControlLeft',
-    reload: 'KeyR', interact: 'KeyE', camera: 'KeyP',
+    reload: 'KeyR', interact: 'KeyE', camera: 'KeyG',
     chat: 'KeyY', teamchat: 'KeyU', scoreboard: 'Tab', map: 'KeyM',
     slot1: 'Digit1', slot2: 'Digit2', slot3: 'Digit3', slot4: 'Digit4',
     slot5: 'Digit5'
@@ -17,16 +17,19 @@
     forward: 'Move forward', back: 'Move back', left: 'Strafe left',
     right: 'Strafe right', jump: 'Jump', sprint: 'Walk slowly',
     crouch: 'Crouch', reload: 'Reload', interact: 'Interact',
-    camera: 'First / third person', chat: 'Chat', teamchat: 'Team chat',
+    camera: 'Third person (G)', chat: 'Chat', teamchat: 'Team chat',
     scoreboard: 'Scoreboard', map: 'Objective info',
     slot1: 'Hotbar 1', slot2: 'Hotbar 2', slot3: 'Hotbar 3',
     slot4: 'Hotbar 4', slot5: 'Hotbar 5'
   };
 
   var DEFAULTS = {
-    sensitivity: 0.16,
+    // A touch higher than it used to be, and read from raw movementX/Y with no
+    // browser acceleration applied (see rawMouse below).
+    sensitivity: 0.24,
     fov: 82,
     invertY: false,
+    rawMouse: true,
     renderScale: 1,
     viewDistance: 900,
     particles: true,
@@ -47,6 +50,7 @@
   }
 
   var Settings = load();
+
   Settings.save = function () {
     try {
       var copy = {};
@@ -59,6 +63,21 @@
     Object.keys(fresh).forEach(function (k) { Settings[k] = fresh[k]; });
     Settings.save();
   };
+  /* One-time migration for browsers carrying the previous defaults: the
+     camera toggle moved from P to G and the base sensitivity went up. */
+  (function migrate() {
+    var stamp = 'blockhaven.settings.migrated.v2';
+    var done = false;
+    try { done = localStorage.getItem(stamp) === '1'; } catch (e) { done = true; }
+    if (done) return;
+    if (Settings.binds.camera === 'KeyP') Settings.binds.camera = 'KeyG';
+    if (Math.abs(Settings.sensitivity - 0.16) < 0.001) {
+      Settings.sensitivity = DEFAULTS.sensitivity;
+    }
+    Settings.save();
+    try { localStorage.setItem(stamp, '1'); } catch (e) {}
+  })();
+
   Settings.DEFAULTS = DEFAULTS;
   Settings.BIND_LABELS = BIND_LABELS;
   Settings.DEFAULT_BINDS = DEFAULT_BINDS;

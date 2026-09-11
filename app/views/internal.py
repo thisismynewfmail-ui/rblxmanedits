@@ -33,10 +33,17 @@ def heartbeat(req: Request):
     world_id = str(payload.get("world", ""))
     if worlds.get(world_id) is None:
         return R.json_response({"ok": False, "error": "unknown world"}, 400)
+    previous = game_registry.world_status(world_id)["players"]
     game_registry.heartbeat(world_id, payload)
     players = int(payload.get("players", 0))
     if players:
         worlds.note_peak(world_id, players)
+    if players != previous:
+        from .. import console
+        world = worlds.get(world_id)
+        console.note("%s: %d player%s (%+d)"
+                     % (world["name"] if world else world_id, players,
+                        "" if players == 1 else "s", players - previous))
     for report in payload.get("reports", []) or []:
         try:
             _apply_report(world_id, report)

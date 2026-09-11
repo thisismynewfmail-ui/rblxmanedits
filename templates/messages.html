@@ -2,24 +2,36 @@
 <div class="panel">
   <div class="panel-head">
     <span>Messages</span>
-    <span class="head-links"><a href="/messages/compose">Compose a new message</a></span>
+    <span class="head-links"><a href="/messages/compose">&#9998; Compose</a></span>
   </div>
-  <div class="panel-body">
+  <div class="panel-body" style="padding-bottom:0">
     <div class="tabs">
       <a href="/messages?box=inbox" class="{{ 'on' if box == 'inbox' else '' }}">Inbox{% if unread %} <span class="badge alert">{{ unread }}</span>{% endif %}</a>
       <a href="/messages?box=sent" class="{{ 'on' if box == 'sent' else '' }}">Sent</a>
     </div>
-    <table class="grid">
-      <tr><th style="width:130px">{{ 'From' if box == 'inbox' else 'To' }}</th><th>Subject</th><th style="width:120px">When</th></tr>
-      {% for m in rows %}
-      <tr style="{{ 'font-weight:bold' if box == 'inbox' and not m.read_at else '' }}">
-        <td><a href="/profile/{{ m.sender_name if box == 'inbox' else m.recipient_name }}">{{ m.sender_name if box == 'inbox' else m.recipient_name }}</a></td>
-        <td><a href="/messages/{{ m.id }}">{{ m.subject }}</a></td>
-        <td class="muted">{{ ago(m.created_at) }}</td>
-      </tr>
-      {% endfor %}
-    </table>
-    {% if not rows %}<p class="muted">This folder is empty.</p>{% endif %}
   </div>
+  <div class="panel-body flush">
+    {% if rows %}
+    <div class="msglist">
+      {% for m in rows %}
+      <a class="msgrow {{ 'unread' if m.unread else '' }}" href="/messages/{{ m.id }}">
+        <canvas class="who-thumb avatar-thumb" width="120" height="120" data-user="{{ m.who }}"></canvas>
+        <span class="msgmain">
+          <span class="msgtop">
+            <span class="msgwho">{{ m.who }}</span>
+            <span class="msgwhen">{{ ago(m.created_at) }}</span>
+          </span>
+          <span class="msgsubject">{{ m.subject }}</span>
+          <span class="msgpreview">{{ m.preview }}</span>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted" style="padding:14px">This folder is empty.
+      <a href="/messages/compose">Write to somebody</a>.</p>
+    {% endif %}
+  </div>
+  <div class="panel-foot">Tap anywhere on a message to open it.</div>
 </div>
 {% include "partials/foot.html" %}

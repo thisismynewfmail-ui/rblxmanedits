@@ -1,4 +1,9 @@
 {% include "partials/head.html" %}
+<div class="notice info only-mobile">
+  The Game View needs a keyboard, a mouse and a desktop browser, so the
+  <b>Load</b> buttons are hidden on a phone. Everything else &mdash; your profile,
+  inventory, market and messages &mdash; works here.
+</div>
 <div class="panel">
   <div class="panel-head">
     <span>World Browser</span>
@@ -22,20 +27,22 @@
         {{ row.world.name }} &mdash; live instances
       </div>
       <div class="panel-body flush">
-        <table class="grid" data-instances="{{ row.world.id }}">
-          <tr><th>Instance</th><th>Players</th><th>Phase</th><th></th></tr>
-          {% for inst in row.status.instance_list %}
-          <tr>
-            <td>#{{ inst.id }}</td>
-            <td>{{ inst.count }}/{{ inst.max }}</td>
-            <td>{{ inst.phase }}</td>
-            <td class="right"><a class="btn small go" href="/{{ row.world.id }}?instance={{ inst.id }}">Join</a></td>
-          </tr>
-          {% endfor %}
-          {% if not row.status.instance_list %}
-          <tr><td colspan="4" class="muted">No instance running yet &mdash; pressing Load starts one.</td></tr>
-          {% endif %}
-        </table>
+        <div class="tablewrap">
+          <table class="grid" data-instances="{{ row.world.id }}">
+            <tr><th>Instance</th><th>Players</th><th>Phase</th><th></th></tr>
+            {% for inst in row.status.instance_list %}
+            <tr>
+              <td>#{{ inst.id }}</td>
+              <td>{{ inst.count }}/{{ inst.max }}</td>
+              <td>{{ inst.phase }}</td>
+              <td class="right"><a class="btn small go no-mobile" href="/{{ row.world.id }}?instance={{ inst.id }}">Join</a></td>
+            </tr>
+            {% endfor %}
+            {% if not row.status.instance_list %}
+            <tr><td colspan="4" class="muted">No instance running yet &mdash; pressing Load starts one.</td></tr>
+            {% endif %}
+          </table>
+        </div>
       </div>
     </div>
   </div>

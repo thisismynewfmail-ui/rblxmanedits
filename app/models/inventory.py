@@ -148,3 +148,36 @@ def unusual_showcase(limit: int = 12) -> List[Dict[str, Any]]:
         data["username"] = row["username"]
         out.append(data)
     return out
+
+
+# Rarities worth putting on the news strip.  A plain purchase is a receipt,
+# not news; an uncommon-or-better item turning up is worth a line.
+NOTABLE_RARITIES = ("uncommon", "rare", "legendary")
+
+
+def notable_finds(limit: int = 6) -> List[Dict[str, Any]]:
+    """Recent acquisitions of uncommon-or-better items, newest first."""
+    rows = db.query(
+        "SELECT i.item_id, i.acquired_at, i.tier, u.username FROM inventory i"
+        " JOIN users u ON u.id=i.user_id"
+        " WHERE i.tier<>'unusual' ORDER BY i.id DESC LIMIT ?", (limit * 8,))
+    out: List[Dict[str, Any]] = []
+    seen = set()
+    for row in rows:
+        item = catalog.get(row["item_id"])
+        if item is None:
+            continue
+        rarity = item.get("rarity", "common")
+        if rarity not in NOTABLE_RARITIES:
+            continue
+        # one line per player per item, so a second copy is not a second story
+        key = (row["username"], item["id"])
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({"username": row["username"], "name": item["name"],
+                    "rarity": rarity, "item_id": item["id"],
+                    "acquired_at": row["acquired_at"]})
+        if len(out) >= limit:
+            break
+    return out

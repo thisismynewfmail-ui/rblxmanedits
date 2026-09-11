@@ -16,19 +16,30 @@ def recent_activity(limit: int = 18) -> List[Dict[str, Any]]:
         events.append({"kind": "post", "username": row["username"],
                        "text": row["body"], "at": row["created_at"],
                        "link": "/profile/%s" % row["username"]})
+    seen_finds = set()
+    # Only finds worth reading about reach the feed: an Unusual pull, or an
+    # uncommon-or-better item.  Routine purchases are left out of it.
     for row in db.query(
             "SELECT i.acquired_at, i.tier, u.username, i.item_id FROM inventory i"
             " JOIN users u ON u.id=i.user_id WHERE i.source='market'"
-            " ORDER BY i.id DESC LIMIT ?", (limit,)):
-        from ..models import catalog
+            " ORDER BY i.id DESC LIMIT ?", (limit * 6,)):
+        from ..models import catalog, inventory
         item = catalog.get(row["item_id"])
         if not item:
             continue
+        unusual = row["tier"] == "unusual"
+        if not unusual and item.get("rarity", "common") not in inventory.NOTABLE_RARITIES:
+            continue
+        key = (row["username"], item["id"])
+        if key in seen_finds:
+            continue
+        seen_finds.add(key)
         events.append({
-            "kind": "unusual" if row["tier"] == "unusual" else "purchase",
+            "kind": "unusual" if unusual else "find",
             "username": row["username"],
-            "text": ("unboxed an UNUSUAL %s!" if row["tier"] == "unusual"
-                     else "bought %s") % item["name"],
+            "text": ("pulled an UNUSUAL %s!" % item["name"] if unusual
+                     else "picked up the %s %s"
+                          % (item.get("rarity", "common"), item["name"])),
             "at": row["acquired_at"],
             "link": "/market?q=%s" % item["name"].replace(" ", "+")})
     for row in db.query(

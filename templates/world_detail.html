@@ -4,8 +4,8 @@
     <div class="panel">
       <div class="panel-head">{{ world.name }}</div>
       <div class="panel-body">
-        <div style="height:260px;border:1px solid #b7cadb;border-radius:4px;overflow:hidden;margin-bottom:10px">
-          <canvas class="world-shot" width="960" height="520" style="width:100%;height:100%"
+        <div style="aspect-ratio:16/9;border:1px solid var(--preview-edge);border-radius:4px;overflow:hidden;margin-bottom:10px">
+          <canvas class="world-shot" width="960" height="540" style="width:100%;height:100%;display:block"
                   data-world="{{ world.thumb }}" data-colors="{{ to_json(world.colors) }}"
                   data-name="{{ world.name }}" data-big="1"></canvas>
         </div>
@@ -15,7 +15,8 @@
             <div class="muted">by <b>{{ world.creator }}</b> &bull; {{ world.genre }}</div>
           </div>
           <div class="right">
-            <a class="btn go big" href="/{{ world.id }}">&#9658; Load</a>
+            <a class="btn go big no-mobile" href="/{{ world.id }}">&#9658; Load</a>
+            <span class="pill only-mobile">Desktop only for now</span>
           </div>
         </div>
         <p style="margin-top:10px;font-size:12px">{{ world.description }}</p>
@@ -40,19 +41,21 @@
     <div class="panel">
       <div class="panel-head green">Live instances</div>
       <div class="panel-body flush">
+        <div class="tablewrap">
         <table class="grid" data-instances="{{ world.id }}">
           <tr><th>Instance</th><th>Players</th><th>Phase</th><th>Round</th><th></th></tr>
           {% for inst in status.instance_list %}
           <tr>
             <td>#{{ inst.id }}</td><td>{{ inst.count }}/{{ inst.max }}</td>
             <td>{{ inst.phase }}</td><td>{{ inst.round }}</td>
-            <td class="right"><a class="btn small go" href="/{{ world.id }}?instance={{ inst.id }}">Join</a></td>
+            <td class="right"><a class="btn small go no-mobile" href="/{{ world.id }}?instance={{ inst.id }}">Join</a></td>
           </tr>
           {% endfor %}
           {% if not status.instance_list %}
           <tr><td colspan="5" class="muted">Nobody is playing right now. Press Load to open the first instance.</td></tr>
           {% endif %}
         </table>
+        </div>
       </div>
       <div class="panel-foot">Server capacity is <b>{{ world.max_players }}</b> players per instance.
         When an instance fills, the host opens another one automatically.</div>
@@ -64,12 +67,12 @@
       <div class="panel-head gold">Statistics</div>
       <div class="panel-body">
         <dl class="stats">
-          <div><dt>Playing</dt><dd data-live-players="{{ world.id }}">{{ status.players }}</dd></div>
-          <div><dt>Instances</dt><dd data-live-instances="{{ world.id }}">{{ status.instances }}</dd></div>
-          <div><dt>Visits</dt><dd>{{ fmt_num(stats.visits) }}</dd></div>
-          <div><dt>Favourites</dt><dd>{{ fmt_num(stats.favourites) }}</dd></div>
-          <div><dt>Peak</dt><dd>{{ fmt_num(stats.peak_players) }}</dd></div>
-          <div><dt>Max/round</dt><dd>{{ world.max_players }}</dd></div>
+          <div><dt>Playing</dt><dd data-live-players="{{ world.id }}" title="{{ status.players }}">{{ status.players }}</dd></div>
+          <div><dt>Instances</dt><dd data-live-instances="{{ world.id }}" title="{{ status.instances }}">{{ status.instances }}</dd></div>
+          <div><dt>Visits</dt><dd title="{{ fmt_num(stats.visits) }}">{{ fmt_num(stats.visits) }}</dd></div>
+          <div><dt>Favourites</dt><dd title="{{ fmt_num(stats.favourites) }}">{{ fmt_num(stats.favourites) }}</dd></div>
+          <div><dt>Peak</dt><dd title="{{ fmt_num(stats.peak_players) }}">{{ fmt_num(stats.peak_players) }}</dd></div>
+          <div><dt>Max/round</dt><dd title="{{ world.max_players }}">{{ world.max_players }}</dd></div>
         </dl>
       </div>
     </div>
@@ -90,13 +93,13 @@
     <div class="panel">
       <div class="panel-head">Top scores</div>
       <div class="panel-body">
-        <table class="grid">
+        <div class="tablewrap"><table class="grid">
           <tr><th>#</th><th>Player</th><th class="right">Score</th></tr>
           {% for row in leaderboard %}
           <tr><td>{{ loop.index }}</td><td><a href="/profile/{{ row.username }}">{{ row.username }}</a></td>
               <td class="right">{{ fmt_num(row.score) }}</td></tr>
           {% endfor %}
-        </table>
+        </table></div>
         {% if not leaderboard %}<p class="muted tiny">No scores recorded yet.</p>{% endif %}
       </div>
     </div>

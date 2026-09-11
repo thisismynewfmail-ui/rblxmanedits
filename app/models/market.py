@@ -102,11 +102,19 @@ def purchase(user_id: int, item_id: str) -> Dict[str, Any]:
 
     db.audit(user_id, "market.purchase", item_id,
              {"price": price, "tier": tier, "effect": effect, "inv_id": inv_id})
+    if unusual:
+        from .. import console
+        console.note("UNUSUAL %s pulled by %s (%s)"
+                     % (item["name"], row["username"],
+                        catalog.UNUSUAL_EFFECTS[effect]["name"]))
     result = {
         "inv_id": inv_id, "item_id": item_id, "name": item["name"],
         "slot": item["slot"], "price": price, "tier": tier, "effect": effect,
         "effect_name": (catalog.UNUSUAL_EFFECTS[effect]["name"] if effect else ""),
         "balance": new_balance, "serial": serial,
+        # authoritative copy count, so the card's "Owned xN" is right even when
+        # the same account bought one somewhere else a moment ago
+        "owned": inventory.count_of(user_id, item_id),
     }
     return result
 
@@ -143,4 +151,5 @@ def sell_back(user_id: int, inv_id: int) -> Dict[str, Any]:
     from . import avatars
     avatars.unequip_missing(user_id)
     db.audit(user_id, "market.sell", row["item_id"], {"refund": refund})
-    return {"refund": refund, "item_id": row["item_id"]}
+    return {"refund": refund, "item_id": row["item_id"],
+            "owned": inventory.count_of(user_id, row["item_id"])}

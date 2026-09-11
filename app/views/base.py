@@ -39,7 +39,13 @@ TICKER_CACHE = {"at": 0.0, "text": ""}
 
 
 def site_ticker() -> str:
-    """Rolling headline strip in the site header (refreshed once a minute)."""
+    """Rolling headline strip in the site header (refreshed once a minute).
+
+    It reports finds, not receipts: an Unusual pull or an uncommon-or-better
+    item turning up is news, somebody buying a plain tee-shirt is not.  The
+    strip always carries at least the standing lines, so it never scrolls
+    through empty space.
+    """
     if time.time() - TICKER_CACHE["at"] < 60 and TICKER_CACHE["text"]:
         return TICKER_CACHE["text"]
     from ..game import registry as game_registry
@@ -52,19 +58,64 @@ def site_ticker() -> str:
     bits.append("%d player%s in game right now" % (playing, "" if playing == 1 else "s"))
     bits.append("%d place visits logged" % stats["visits"])
     for row in inventory.unusual_showcase(3):
-        bits.append("%s unboxed an UNUSUAL %s (%s)"
+        bits.append("%s pulled an UNUSUAL %s (%s)"
                     % (row["username"], row["name"], row["effect_name"]))
+    for row in inventory.notable_finds(4):
+        bits.append("%s now owns the %s %s"
+                    % (row["username"], row["rarity"], row["name"]))
     for world in worlds.all_worlds():
         status = game_registry.world_status(world["id"])
         if status["players"]:
             bits.append("%s: %d playing across %d instance%s"
                         % (world["name"], status["players"], status["instances"],
                            "" if status["instances"] == 1 else "s"))
+    bits.append("Hats are the only slot that can roll Unusual -- 0.5% a purchase")
     bits.append("New here? Grab 2,000 credits and go buy a hat.")
     text = "  \u2022  ".join(bits)
     TICKER_CACHE["at"] = time.time()
     TICKER_CACHE["text"] = text
     return text
+
+
+# The theme is remembered in three independent places on purpose: the
+# account row (so a phone and a desktop agree), a cookie (so the server can
+# stamp the right data-theme on the very first byte of HTML, and so the
+# choice outlives a restart even for a visitor who never signs in) and
+# localStorage (so it still works when cookies are refused).  Losing any one
+# of them does not lose the setting.
+THEME_COOKIE = "bh_theme"
+THEME_COOKIE_AGE = 365 * 24 * 3600
+
+
+def theme_for(req: Request) -> str:
+    """The theme this request should be rendered in.
+
+    An account that has actually chosen light or dark wins, because that is
+    the choice that is meant to follow the player between devices.  Anything
+    still on ``auto`` -- every signed-out visitor, and any account that has
+    not picked -- falls back to what this browser last chose.
+    """
+    choice = users.theme_of(req.user) if req.user else "auto"
+    if choice != "auto":
+        return choice
+    cookie = (req.cookies.get(THEME_COOKIE) or "").strip().lower()
+    return cookie if cookie in ("light", "dark") else "auto"
+
+
+def remember_theme(resp: Response, theme: str) -> Response:
+    """Mirror a theme change onto the device cookie.
+
+    ``auto`` means "stop overriding", so it clears the cookie rather than
+    storing the word -- otherwise an account that deliberately went back to
+    following the operating system would keep being dragged to whatever the
+    browser last had.
+    """
+    if theme in ("light", "dark"):
+        resp.set_cookie(THEME_COOKIE, theme, max_age=THEME_COOKIE_AGE,
+                        http_only=False)
+    else:
+        resp.delete_cookie(THEME_COOKIE)
+    return resp
 
 
 def context(req: Request, **extra: Any) -> Dict[str, Any]:
@@ -83,6 +134,7 @@ def context(req: Request, **extra: Any) -> Dict[str, Any]:
         "nav_requests": friends.pending_count(user["id"]) if user else 0,
         "nav_friends": friends.count_friends(user["id"]) if user else 0,
         "is_admin": bool(user and user["is_admin"]),
+        "theme": theme_for(req),
         "fmt_time": fmt_time,
         "fmt_date": fmt_date,
         "fmt_num": fmt_num,

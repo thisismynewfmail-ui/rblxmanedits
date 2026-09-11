@@ -1,6 +1,6 @@
 <div class="worldcard">
   <a class="shot" href="/worlds/{{ row.world.id }}">
-    <canvas class="world-shot" width="600" height="320"
+    <canvas class="world-shot" width="640" height="360"
             data-world="{{ row.world.thumb }}"
             data-colors="{{ to_json(row.world.colors) }}"
             data-name="{{ row.world.name }}"></canvas>
@@ -23,7 +23,8 @@
       <i style="width:{{ row.stats.rating }}%"></i>
     </div>
     <div style="margin-top:8px" class="spread">
-      <a class="btn go" href="/{{ row.world.id }}">&#9658; Load</a>
+      <a class="btn go no-mobile" href="/{{ row.world.id }}">&#9658; Load</a>
+      <span class="pill only-mobile" title="The Game View needs a desktop browser">Desktop only</span>
       <a class="btn small" href="/worlds/{{ row.world.id }}">Details</a>
     </div>
   </div>

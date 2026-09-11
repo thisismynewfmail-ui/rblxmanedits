@@ -25,6 +25,7 @@
     'varying vec3 vNormal;',
     'varying vec3 vWorld;',
     'varying vec3 vLocal;',
+    'varying vec3 vFaceNormal;',
     'varying vec2 vUV;',
     'varying vec4 vParams;',
     'varying vec4 vDecal;',
@@ -38,6 +39,7 @@
     '                 aModel1.xyz / max(scale.y, 0.0001),',
     '                 aModel2.xyz / max(scale.z, 0.0001));',
     '  vNormal = normalize(nm * aNormal);',
+    '  vFaceNormal = aNormal;',
     '  vColor = aColor.rgb;',
     '  vAlpha = aColor.a;',
     '  vUV = aUV;',
@@ -54,6 +56,7 @@
     'varying vec3 vNormal;',
     'varying vec3 vWorld;',
     'varying vec3 vLocal;',
+    'varying vec3 vFaceNormal;',
     'varying vec2 vUV;',
     'varying vec4 vParams;',
     'varying vec4 vDecal;',
@@ -92,8 +95,9 @@
     '    float g = hash(floor(vWorld.xz * 0.7));',
     '    base *= 0.93 + g * 0.14;',
     '  }',
-    '  // decal on the +Z face',
-    '  if (vDecal.z > 0.0 && normal.z > 0.6) {',
+    '  // decal on the part\'s own +Z face (object space, so it stays on the',
+    '  // front of a face or a shirt no matter which way the avatar turns)',
+    '  if (vDecal.z > 0.0 && vFaceNormal.z > 0.6) {',
     '    vec2 duv = vec2(vUV.x, 1.0 - vUV.y) * vDecal.z + vDecal.xy;',
     '    vec4 tex = texture2D(uAtlas, duv);',
     '    base = mix(base, tex.rgb, tex.a);',
@@ -355,11 +359,14 @@
 
     this.meshes = Geometry.build();
     this.dynamic = {};
+    this.dynamicGlass = {};
     this.staticBatches = {};
     this.transparent = {};
     var self = this;
-    ['box', 'cyl', 'sph', 'cone', 'wedge', 'torus'].forEach(function (name) {
+    ['box', 'rbox', 'rlimb', 'rhead', 'cyl', 'sph', 'cone', 'wedge',
+     'torus'].forEach(function (name) {
       self.dynamic[name] = new Batch(gl, self.meshes[name], self.program);
+      self.dynamicGlass[name] = new Batch(gl, self.meshes[name], self.program);
       self.staticBatches[name] = new Batch(gl, self.meshes[name], self.program);
       self.transparent[name] = new Batch(gl, self.meshes[name], self.program);
     });
@@ -528,15 +535,27 @@
 
   Renderer.prototype.beginFrame = function (dt) {
     this.time += dt || 0;
+    // Faces and decals are painted into the atlas on demand (the first time an
+    // avatar wearing them is built), which can happen after the last
+    // buildStatic().  Re-uploading here is what stops a just-equipped face
+    // from rendering blank.
+    this.refreshAtlas();
     var self = this;
     Object.keys(this.dynamic).forEach(function (k) { self.dynamic[k].reset(); });
+    Object.keys(this.dynamicGlass).forEach(function (k) {
+      self.dynamicGlass[k].reset();
+    });
     this.tagQueue = [];
     this.stats.instances = 0;
     this.stats.draws = 0;
   };
 
   Renderer.prototype.push = function (part, offset) {
-    return this.addPart(this.dynamic, part, offset);
+    // See-through accessories (the astro dome, glass) have to be drawn in the
+    // blended pass or they come out solid.
+    var target = (part.a !== undefined && part.a < 0.999)
+      ? this.dynamicGlass : this.dynamic;
+    return this.addPart(target, part, offset);
   };
 
   Renderer.prototype.pushRaw = function (kind, px, py, pz, rx, ry, rz, sx, sy, sz,
@@ -622,6 +641,10 @@
     Object.keys(this.transparent).forEach(function (k) {
       self.stats.instances += self.transparent[k].draw(true);
       if (self.transparent[k].count) self.stats.draws++;
+    });
+    Object.keys(this.dynamicGlass).forEach(function (k) {
+      self.stats.instances += self.dynamicGlass[k].draw(false);
+      if (self.dynamicGlass[k].count) self.stats.draws++;
     });
     gl.depthMask(true);
   };

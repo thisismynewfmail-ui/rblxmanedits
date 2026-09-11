@@ -40,6 +40,9 @@ RESPAWN_SECONDS = 4.0
 PLAYER_SIZE = (3.2, 5.4, 2.0)
 HEAD_MIN_Y = 4.0
 HEAD_MAX_Y = 5.45
+# Must match Avatar.EYE_HEIGHT in static/js/engine/avatar.js, otherwise the
+# crosshair and the server's shot origin disagree.
+EYE_HEIGHT = 5.05
 CHAT_MAX = 160
 VISIT_SECONDS = 30
 
@@ -655,7 +658,7 @@ class GameInstance:
             except (TypeError, ValueError):
                 return
 
-            origin = [player.pos[0], player.pos[1] + 4.85, player.pos[2]]
+            origin = [player.pos[0], player.pos[1] + EYE_HEIGHT, player.pos[2]]
             if kind == "melee":
                 self.do_melee(player, direction, stats)
                 self.broadcast({"t": "fx", "k": "swing", "id": player.pid},
@@ -1112,6 +1115,10 @@ class GameInstance:
             else:
                 damage = splash * falloff
             knock = float(stats.get("knockback", 20)) * falloff
+            if player is owner:
+                # the owner gets a stronger shove than a bystander, which is
+                # what makes a floor-aimed rocket a usable jump
+                knock *= float(stats.get("self_knockback", 1.0))
             if knock > 0:
                 push = normalise([centre[0] - proj.pos[0],
                                   max(0.4, centre[1] - proj.pos[1]),

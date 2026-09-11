@@ -34,6 +34,7 @@
                 {% endif %}
                 {% if not it.is_default %}
                 <button class="btn small" data-sell="{{ it.inv_id }}" data-name="{{ it.name }}"
+                        data-item="{{ it.item_id }}" data-refund="{{ int(it.price * 0.4) }}"
                         title="Sell back for 40%">Sell</button>
                 {% endif %}
               </div>
@@ -49,8 +50,8 @@
     <div class="panel">
       <div class="panel-head gold">Wallet</div>
       <div class="panel-body center">
-        <div style="font-size:26px;font-weight:bold;color:#1b3d5f">
-          <span class="coin" style="width:18px;height:18px;display:inline-block;border-radius:50%;background:radial-gradient(circle at 32% 30%,#ffe9a1,#e0a615 62%,#a97a06);border:1px solid #7a5804;vertical-align:-2px"></span>
+        <div style="font-size:26px;font-weight:bold;color:var(--ink-strong)">
+          <span class="coin" style="width:18px;height:18px;vertical-align:-2px"></span>
           <span id="wallet-big">{{ fmt_num(user.credits) }}</span>
         </div>
         <a class="btn primary block" style="margin-top:8px" href="/market">Spend it</a>
@@ -58,16 +59,18 @@
     </div>
     <div class="panel">
       <div class="panel-head">Recent transactions</div>
-      <div class="panel-body">
-        <table class="grid">
-          {% for row in ledger %}
-          <tr>
-            <td class="tiny">{{ row.reason }}<div class="muted">{{ ago(row.created_at) }}</div></td>
-            <td class="right" style="color:{{ '#275e2b' if row.delta > 0 else '#8c1c15' }}">
-              {{ '+' if row.delta > 0 else '' }}{{ fmt_num(row.delta) }}</td>
-          </tr>
-          {% endfor %}
-        </table>
+      <div class="panel-body flush">
+        <div class="tablewrap">
+          <table class="grid">
+            {% for row in ledger %}
+            <tr>
+              <td class="tiny">{{ row.reason }}<div class="muted">{{ ago(row.created_at) }}</div></td>
+              <td class="right" style="color:{{ 'var(--ok-ink)' if row.delta > 0 else 'var(--bad-ink)' }}">
+                {{ '+' if row.delta > 0 else '' }}{{ fmt_num(row.delta) }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
       </div>
     </div>
   </div>

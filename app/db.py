@@ -34,7 +34,10 @@ CREATE TABLE IF NOT EXISTS users (
     is_admin        INTEGER NOT NULL DEFAULT 0,
     is_banned       INTEGER NOT NULL DEFAULT 0,
     place_visits    INTEGER NOT NULL DEFAULT 0,
-    forum_posts     INTEGER NOT NULL DEFAULT 0
+    forum_posts     INTEGER NOT NULL DEFAULT 0,
+    theme           TEXT NOT NULL DEFAULT 'auto',
+    privacy         TEXT NOT NULL DEFAULT '{}',
+    pinned          TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -83,6 +86,7 @@ CREATE TABLE IF NOT EXISTS avatars (
     colors      TEXT NOT NULL DEFAULT '{}',
     equipped    TEXT NOT NULL DEFAULT '{}',
     hotbar      TEXT NOT NULL DEFAULT '[]',
+    body_type   TEXT NOT NULL DEFAULT 'male',
     updated_at  INTEGER NOT NULL DEFAULT 0
 );
 
@@ -262,10 +266,37 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
+# Columns added after the first release.  ``init_db`` adds any that are
+# missing so an existing data/blockhaven.sqlite3 keeps working across upgrades.
+MIGRATIONS = [
+    ("users", "theme", "TEXT NOT NULL DEFAULT 'auto'"),
+    ("users", "privacy", "TEXT NOT NULL DEFAULT '{}'"),
+    ("users", "pinned", "TEXT NOT NULL DEFAULT '[]'"),
+    ("avatars", "body_type", "TEXT NOT NULL DEFAULT 'male'"),
+]
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    for table, column, decl in MIGRATIONS:
+        try:
+            existing = {row["name"] for row in
+                        conn.execute("PRAGMA table_info(%s)" % table).fetchall()}
+        except sqlite3.Error:
+            continue
+        if not existing or column in existing:
+            continue
+        try:
+            conn.execute("ALTER TABLE %s ADD COLUMN %s %s"
+                         % (table, column, decl))
+        except sqlite3.Error:
+            pass
+
+
 def init_db() -> None:
     conn = connect()
     with _write_lock:
         conn.executescript(SCHEMA)
+        _migrate(conn)
 
 
 def query(sql: str, params: Iterable[Any] = ()) -> List[sqlite3.Row]:

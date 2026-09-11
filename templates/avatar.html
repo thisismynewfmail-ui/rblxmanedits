@@ -20,6 +20,23 @@ put on a hat, then set up the five hotbar slots you take into a world.</div>
     </div>
 
     <div class="panel">
+      <div class="panel-head">Body type</div>
+      <div class="panel-body">
+        <div class="bodypick">
+          {% for bt in body_types %}
+          <button class="bodyopt {{ 'on' if raw.body_type == bt else '' }}"
+                  data-body="{{ bt }}">
+            <span class="bodyicon {{ bt }}" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="bodylabel">{{ body_type_labels[bt] }}</span>
+          </button>
+          {% endfor %}
+        </div>
+        <p class="tiny muted" style="margin-top:6px">Both builds share the same head and
+          the same hitbox, so every hat, face and outfit you own fits either one.</p>
+      </div>
+    </div>
+
+    <div class="panel">
       <div class="panel-head gold">Body colours</div>
       <div class="panel-body" id="body-colors">
         {% for part in body_parts %}
@@ -35,7 +52,7 @@ put on a hat, then set up the five hotbar slots you take into a world.</div>
             {% endfor %}
           </div>
           <input type="color" id="c-{{ part }}" value="{{ raw.colors[part] }}" data-custom="{{ part }}"
-                 style="width:100%;height:22px;margin-top:4px;padding:0;border:1px solid #9fb6c9;border-radius:3px">
+                 style="width:100%;height:22px;margin-top:4px;padding:0;border:1px solid var(--field-edge);border-radius:3px">
         </div>
         {% endfor %}
       </div>

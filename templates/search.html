@@ -22,12 +22,12 @@
     <h2 style="margin-top:12px">Items</h2>
     <div class="itemgrid">
       {% for it in items %}
-      <div class="item">
+      <a class="item" href="/market?q={{ it.name }}">
         <div class="thumb-wrap"><canvas class="thumb item-thumb" width="216" height="216" data-item="{{ it.id }}"></canvas></div>
         <div class="meta"><span class="iname">{{ it.name }}</span>
           <span class="islot">{{ it.slot_label }}</span>
           <div class="price"><span class="coin"></span> {{ fmt_num(it.price) }}</div></div>
-      </div>
+      </a>
       {% endfor %}
     </div>
     {% endif %}

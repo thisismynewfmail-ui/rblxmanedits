@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="{{ theme }}">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14548e">
 <title>{{ page_title }} | {{ SITE_NAME }}</title>
 <link rel="stylesheet" href="/static/css/site.css">
 <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
@@ -10,8 +11,23 @@
 window.BH = {
   csrf: "{{ csrf }}",
   user: {% if user %}{"id": {{ user.id }}, "name": "{{ user.username }}", "credits": {{ user.credits }}, "admin": {{ 1 if user.is_admin else 0 }}}{% else %}null{% endif %},
-  path: "{{ path }}"
+  path: "{{ path }}",
+  theme: "{{ theme }}"
 };
+/* Applied before first paint so a dark-theme reload never flashes white.
+   BH.theme is already the server's answer -- the account's stored choice if
+   it has one, otherwise the bh_theme cookie this browser wrote -- so it is
+   almost always right by the time the HTML arrives.  localStorage is the
+   last resort, for a browser that refuses cookies. */
+(function () {
+  var theme = window.BH.theme;
+  if (theme !== 'light' && theme !== 'dark') {
+    try { theme = localStorage.getItem('blockhaven.theme'); } catch (e) {}
+  }
+  if (theme !== 'light' && theme !== 'dark') theme = 'auto';
+  document.documentElement.setAttribute('data-theme', theme);
+  window.BH.theme = theme;
+})();
 </script>
 </head>
 <body>
@@ -25,11 +41,11 @@ window.BH = {
       <input type="search" name="q" placeholder="Search players, items, worlds" value="{{ search_term }}">
       <button type="submit">Go</button>
     </form>
-    <div class="topnav">
+    <div class="topnav push">
       {% if user %}
       <a href="/worlds" class="{{ 'on' if path == '/worlds' else '' }}">Worlds</a>
       <a href="/market" class="{{ 'on' if path == '/market' else '' }}">Market</a>
-      <a href="/users">People</a>
+      <a href="/profile/{{ user.username }}" class="{{ 'on' if path.startswith('/profile') else '' }}">Profile</a>
       {% if is_admin %}<a href="/admin-dashboard" class="{{ 'on' if path == '/admin-dashboard' else '' }}">Admin</a>{% endif %}
       {% else %}
       <a href="/worlds">Worlds</a>
@@ -38,39 +54,65 @@ window.BH = {
     </div>
     {% if user %}
     <a class="wallet" href="/inventory" title="Your credits"><span class="coin"></span> <span id="wallet-amount">{{ fmt_num(user.credits) }}</span></a>
-    <div class="topnav"><a href="/logout">Sign out</a></div>
-    {% else %}
-    <div class="topnav"><a href="/login">Sign in</a><a href="/register" class="on">Join</a></div>
     {% endif %}
+    <button class="themetoggle" id="theme-toggle" type="button"
+            aria-pressed="false" aria-label="Toggle dark mode" title="Toggle dark mode">
+      <span class="sky"><i></i><i></i><i></i><i></i></span>
+      <span class="knob"></span>
+    </button>
+    {% if user %}
+    <div class="topnav no-mobile"><a href="/logout">Sign out</a></div>
+    {% else %}
+    <div class="topnav no-mobile"><a href="/login">Sign in</a><a href="/register" class="on">Join</a></div>
+    {% endif %}
+    <button class="navtoggle" id="nav-toggle" type="button" aria-expanded="false"
+            aria-controls="main-nav" aria-label="Menu"><i></i><i></i><i></i></button>
   </div>
 </div>
 
-<div class="tabbar">
+<div class="tabbar" id="main-nav">
   <div class="wrap">
+    <form class="drawer-search only-mobile" action="/search" method="get">
+      <input type="search" name="q" placeholder="Search players, items, worlds" value="{{ search_term }}">
+      <button class="btn" type="submit">Go</button>
+    </form>
     <a href="/" class="{{ 'on' if path == '/' else '' }}">Home</a>
     {% if user %}
-    <a href="/profile/{{ user.username }}" class="{{ 'on' if path.startswith('/profile') else '' }}">Profile</a>
+    <a href="/users" class="{{ 'on' if path == '/users' else '' }}">People</a>
     <a href="/messages" class="{{ 'on' if path.startswith('/messages') else '' }}">Messages{% if nav_unread %} <span class="badge alert">{{ nav_unread }}</span>{% endif %}</a>
     <a href="/friends" class="{{ 'on' if path == '/friends' else '' }}">Friends{% if nav_requests %} <span class="badge">{{ nav_requests }}</span>{% endif %}</a>
     <a href="/avatar" class="{{ 'on' if path == '/avatar' else '' }}">Avatar</a>
     <a href="/inventory" class="{{ 'on' if path.startswith('/inventory') else '' }}">Inventory</a>
     <a href="/worlds" class="{{ 'on' if path.startswith('/worlds') else '' }}">Worlds</a>
     <a href="/market" class="{{ 'on' if path == '/market' else '' }}">Market</a>
+    <a class="off" aria-disabled="true" title="The world editor is not ready yet.">Editor<span class="soon">soon</span></a>
     <a href="/settings" class="{{ 'on' if path == '/settings' else '' }}">Settings</a>
+    <a href="/profile/{{ user.username }}" class="only-mobile {{ 'on' if path.startswith('/profile') else '' }}">My profile</a>
+    {% if is_admin %}<a href="/admin-dashboard" class="only-mobile">Admin</a>{% endif %}
+    <a href="/logout" class="only-mobile">Sign out</a>
     {% else %}
     <a href="/worlds">Worlds</a>
     <a href="/market">Market</a>
     <a href="/users">People</a>
+    <a class="off" aria-disabled="true" title="The world editor is not ready yet.">Editor<span class="soon">soon</span></a>
     <a href="/login">Sign in</a>
     <a href="/register">Create account</a>
     {% endif %}
+    <div class="drawer-extra only-mobile">
+      <span>Dark mode</span>
+      <button class="themetoggle" id="theme-toggle-mobile" type="button"
+              aria-pressed="false" aria-label="Toggle dark mode">
+        <span class="sky"><i></i><i></i><i></i><i></i></span>
+        <span class="knob"></span>
+      </button>
+    </div>
   </div>
 </div>
 
 <div class="ticker">
   <div class="wrap">
     <b>NEWS</b>
-    <span class="grow" style="overflow:hidden"><span class="ticker-track">{{ ticker }}</span></span>
+    <span class="ticker-window"><span class="ticker-track"><span>{{ ticker }}</span><span>{{ ticker }}</span></span></span>
   </div>
 </div>
 

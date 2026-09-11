@@ -6,7 +6,7 @@
       <span class="dot on"></span></span>
   </div>
   <div class="panel-body">
-    <dl class="stats" style="grid-template-columns:repeat(6,1fr)">
+    <dl class="stats" style="grid-template-columns:repeat(auto-fit,minmax(96px,1fr))">
       <div><dt>Accounts</dt><dd id="s-users">{{ fmt_num(live.site.users) }}</dd></div>
       <div><dt>Online</dt><dd id="s-online">{{ live.online_users }}</dd></div>
       <div><dt>In game</dt><dd id="s-ingame">{{ live.in_game }}</dd></div>
@@ -22,7 +22,7 @@
     <div class="panel">
       <div class="panel-head">Worlds &amp; instances</div>
       <div class="panel-body flush">
-        <table class="grid" id="admin-worlds">
+        <div class="tablewrap"><table class="grid" id="admin-worlds">
           <tr><th>World</th><th>Players</th><th>Instances</th><th>Capacity</th><th>Visits</th><th>Tick</th><th>Status</th></tr>
           {% for w in live.worlds %}
           <tr data-world-row="{{ w.id }}">
@@ -35,21 +35,21 @@
             <td class="s">{% if w.online %}<span class="pill green">running</span>{% else %}<span class="pill red">offline</span>{% endif %}</td>
           </tr>
           {% endfor %}
-        </table>
+        </table></div>
       </div>
     </div>
 
     <div class="panel">
       <div class="panel-head">Host processes</div>
       <div class="panel-body flush">
-        <table class="grid" id="admin-hosts">
+        <div class="tablewrap"><table class="grid" id="admin-hosts">
           <tr><th>World</th><th>PID</th><th>Port</th><th>Uptime</th><th>Restarts</th><th>Alive</th></tr>
           {% for h in live.hosts %}
           <tr><td>{{ h.world }}</td><td>{{ h.pid }}</td><td>{{ h.port }}</td>
               <td>{{ int(h.uptime) }}s</td><td>{{ h.restarts }}</td>
               <td>{% if h.alive %}<span class="pill green">yes</span>{% else %}<span class="pill red">no</span>{% endif %}</td></tr>
           {% endfor %}
-        </table>
+        </table></div>
       </div>
       <div class="panel-foot">Web server pid {{ server.pid }} on port {{ server.port }} &bull; Python {{ server.python }}
         &bull; database <code>{{ server.db }}</code></div>
@@ -62,7 +62,7 @@
           <input type="search" name="q" value="{{ term }}" placeholder="Search players" style="width:220px">
           <button class="btn">Search</button>
         </form>
-        <table class="grid">
+        <div class="tablewrap"><table class="grid">
           <tr><th>Player</th><th>Credits</th><th>Joined</th><th>Last seen</th><th>Status</th><th>Actions</th></tr>
           {% for u in user_rows %}
           <tr data-user-row="{{ u.username }}">
@@ -77,7 +77,7 @@
             </td>
           </tr>
           {% endfor %}
-        </table>
+        </table></div>
       </div>
     </div>
   </div>
@@ -120,26 +120,26 @@
     <div class="panel">
       <div class="panel-head">Recent credit movements</div>
       <div class="panel-body flush">
-        <table class="grid">
+        <div class="tablewrap"><table class="grid">
           {% for row in ledger %}
           <tr><td class="tiny"><a href="/profile/{{ row.username }}">{{ row.username }}</a><br>
               <span class="muted">{{ row.reason }}</span></td>
-              <td class="right" style="color:{{ '#275e2b' if row.delta > 0 else '#8c1c15' }}">
+              <td class="right" style="color:{{ 'var(--ok-ink)' if row.delta > 0 else 'var(--bad-ink)' }}">
                 {{ '+' if row.delta > 0 else '' }}{{ fmt_num(row.delta) }}</td></tr>
           {% endfor %}
-        </table>
+        </table></div>
       </div>
     </div>
 
     <div class="panel">
       <div class="panel-head">Audit log</div>
       <div class="panel-body flush scroll" style="max-height:280px">
-        <table class="grid">
+        <div class="tablewrap"><table class="grid">
           {% for row in audit %}
           <tr><td class="tiny"><b>{{ row.action }}</b> {{ row.target }}<br>
               <span class="muted">{{ row.username if row.username else 'system' }} &bull; {{ ago(row.created_at) }}</span></td></tr>
           {% endfor %}
-        </table>
+        </table></div>
       </div>
     </div>
   </div>

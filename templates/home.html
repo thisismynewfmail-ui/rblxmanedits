@@ -1,4 +1,23 @@
 {% include "partials/head.html" %}
+
+<div class="eventbar" data-countdown="{{ spotlight_left }}">
+  <span class="glow"></span>
+  <div class="inner">
+    <div class="tagline">
+      <span class="kicker">{{ spotlight.kicker }}</span>
+      <h2>{{ spotlight.title }}</h2>
+      <p>{{ spotlight.blurb }}</p>
+    </div>
+    <div class="countdown" aria-label="Time left in this spotlight">
+      <div class="unit"><b data-cd="d">0</b><span>days</span></div>
+      <div class="unit"><b data-cd="h">0</b><span>hrs</span></div>
+      <div class="unit"><b data-cd="m">0</b><span>min</span></div>
+      <div class="unit"><b data-cd="s">0</b><span>sec</span></div>
+    </div>
+    <a class="btn go" href="{{ spotlight.href }}">{{ spotlight.cta }}</a>
+  </div>
+</div>
+
 <div class="row">
   <div class="col-side">
     <div class="panel">
@@ -60,13 +79,15 @@
 
     <div class="panel">
       <div class="panel-head">Online now</div>
-      <div class="panel-body">
-        <table class="grid">
-          {% for u in online %}
-          <tr><td><span class="dot on"></span> <a href="/profile/{{ u.username }}">{{ u.username }}</a></td>
-              <td class="right tiny muted">{{ ago(u.last_seen) }}</td></tr>
-          {% endfor %}
-        </table>
+      <div class="panel-body flush">
+        <div class="tablewrap">
+          <table class="grid">
+            {% for u in online %}
+            <tr><td><span class="dot on"></span> <a href="/profile/{{ u.username }}">{{ u.username }}</a></td>
+                <td class="right tiny muted">{{ ago(u.last_seen) }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -78,6 +99,9 @@
         <div class="worldgrid">
           {% for row in worlds %}{% include "partials/world_card.html" %}{% endfor %}
         </div>
+        <p class="tiny muted only-mobile" style="margin:10px 0 0">
+          Worlds run in a desktop browser. On a phone {{ SITE_NAME }} is your profile,
+          inventory and inbox &mdash; the Load buttons come back on a computer.</p>
       </div>
     </div>
 
@@ -108,29 +132,16 @@
 
   <div class="col-narrow">
     <div class="panel">
-      <div class="panel-head gold">Leaderboard</div>
-      <div class="panel-body">
-        <table class="grid">
-          <tr><th>#</th><th>Player</th><th class="right">Score</th></tr>
-          {% for row in leaderboard %}
-          <tr><td>{{ loop.index }}</td>
-              <td><a href="/profile/{{ row.username }}">{{ row.username }}</a></td>
-              <td class="right">{{ fmt_num(row.score) }}</td></tr>
-          {% endfor %}
-        </table>
-      </div>
-    </div>
-
-    <div class="panel">
       <div class="panel-head">Site activity</div>
       <div class="panel-body">
         {% for e in activity %}
-        <div style="padding:4px 0;border-bottom:1px dotted #cfdbe5">
+        <div style="padding:4px 0;border-bottom:1px dotted var(--line-dot)">
           <a href="/profile/{{ e.username }}">{{ e.username }}</a>
           <span class="{{ 'pill purple' if e.kind == 'unusual' else '' }}">{{ e.text }}</span>
           <div class="tiny muted">{{ ago(e.at) }}</div>
         </div>
         {% endfor %}
+        {% if not activity %}<p class="muted tiny">Quiet out there.</p>{% endif %}
       </div>
     </div>
 
@@ -143,8 +154,24 @@
           <span class="pill purple tiny">{{ row.name }}</span>
         </div>
         {% endfor %}
+        {% if not showcase %}<p class="muted tiny">Nobody has pulled one yet.</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head gold">Coming up</div>
+      <div class="panel-body">
+        <div class="spotgrid">
+          {% for e in upcoming %}
+          <div class="spotcard">
+            <div class="lead">{{ e.title }}</div>
+            <div class="sub">{{ e.kicker }} &bull; from {{ fmt_date(e.starts_at) }}</div>
+          </div>
+          {% endfor %}
+        </div>
       </div>
     </div>
   </div>
 </div>
+{% set page_script = "/static/js/ui/home.js" %}
 {% include "partials/foot.html" %}

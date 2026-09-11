@@ -30,7 +30,17 @@ def inbox(req: Request):
     uid = int(req.user["id"])
     box = req.query.get("box", "inbox")
     rows = messages.sent(uid) if box == "sent" else messages.inbox(uid)
-    return render(req, "messages.html", box=box, rows=rows,
+    view = []
+    for row in rows:
+        view.append({
+            "id": int(row["id"]),
+            "who": row["recipient_name"] if box == "sent" else row["sender_name"],
+            "subject": row["subject"],
+            "preview": messages.preview(row["body"]),
+            "created_at": int(row["created_at"]),
+            "unread": box == "inbox" and not row["read_at"],
+        })
+    return render(req, "messages.html", box=box, rows=view,
                   unread=messages.unread_count(uid))
 
 
@@ -63,7 +73,11 @@ def read_message(req: Request, message_id: str = "0"):
     if message is None:
         return R.error(404, "That message is not in your mailbox.")
     messages.mark_read(int(message_id), uid)
-    return render(req, "message.html", message=message)
+    return render(req, "message.html", message=message,
+                  thread=messages.thread_for(message, uid),
+                  other=(message["sender_name"]
+                         if int(message["recipient_id"]) == uid
+                         else message["recipient_name"]))
 
 
 @router.post("/messages/<message_id:int>/delete")
@@ -87,10 +101,24 @@ def api_send(req: Request):
     return api_ok(id=message_id)
 
 
+@router.get("/api/messages/recent")
+@login_required
+def api_recent(req: Request):
+    return api_ok(rows=messages.recent(int(req.user["id"]), 8))
+
+
 @router.get("/api/social/counts")
 @login_required
 def counts(req: Request):
+    """One poll drives every live element in the chrome.
+
+    Credits and the theme come back too so a second device signed into the
+    same account catches up without a reload.
+    """
     uid = int(req.user["id"])
+    fresh = users.get_by_id(uid) or req.user
     return api_ok(unread=messages.unread_count(uid),
                   requests=friends.pending_count(uid),
-                  friends=friends.count_friends(uid))
+                  friends=friends.count_friends(uid),
+                  credits=int(fresh["credits"]),
+                  theme=users.theme_of(fresh))

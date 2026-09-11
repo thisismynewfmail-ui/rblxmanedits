@@ -101,3 +101,41 @@ def unread_count(user_id: int) -> int:
 
 def total() -> int:
     return int(db.scalar("SELECT COUNT(*) FROM messages"))
+
+
+def preview(body: str, length: int = 90) -> str:
+    """One-line teaser used by the inbox rows and the floating messenger."""
+    flat = " ".join((body or "").split())
+    return flat if len(flat) <= length else flat[:length - 1].rstrip() + "\u2026"
+
+
+def recent(user_id: int, limit: int = 8) -> List[Dict[str, Any]]:
+    """Latest conversations for the docked messenger: newest first, inbox only."""
+    rows = inbox(user_id, limit)
+    return [{
+        "id": int(row["id"]),
+        "who": row["sender_name"],
+        "subject": row["subject"],
+        "preview": preview(row["body"]),
+        "created_at": int(row["created_at"]),
+        "unread": not row["read_at"],
+    } for row in rows]
+
+
+def thread_for(message: Dict[str, Any], user_id: int,
+               limit: int = 12) -> List[Dict[str, Any]]:
+    """Every message exchanged with the other party, oldest first.
+
+    Scoped exactly like :func:`get`: only rows where the viewer is one of the
+    two participants are ever returned.
+    """
+    other = (int(message["sender_id"]) if int(message["recipient_id"]) == user_id
+             else int(message["recipient_id"]))
+    rows = db.query(
+        "SELECT m.*, s.username AS sender_name FROM messages m"
+        " JOIN users s ON s.id=m.sender_id"
+        " WHERE ((m.sender_id=? AND m.recipient_id=? AND m.del_sender=0)"
+        "     OR (m.sender_id=? AND m.recipient_id=? AND m.del_recipient=0))"
+        " ORDER BY m.id DESC LIMIT ?",
+        (user_id, other, other, user_id, limit))
+    return list(reversed(db.rows_to_dicts(rows)))
