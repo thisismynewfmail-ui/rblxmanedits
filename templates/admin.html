@@ -1,0 +1,156 @@
+{% include "partials/head.html" %}
+<div class="panel">
+  <div class="panel-head red">
+    <span>Administrator Dashboard</span>
+    <span class="head-links">live &mdash; refreshing every 3 seconds
+      <span class="dot on"></span></span>
+  </div>
+  <div class="panel-body">
+    <dl class="stats" style="grid-template-columns:repeat(6,1fr)">
+      <div><dt>Accounts</dt><dd id="s-users">{{ fmt_num(live.site.users) }}</dd></div>
+      <div><dt>Online</dt><dd id="s-online">{{ live.online_users }}</dd></div>
+      <div><dt>In game</dt><dd id="s-ingame">{{ live.in_game }}</dd></div>
+      <div><dt>Visits</dt><dd id="s-visits">{{ fmt_num(live.site.visits) }}</dd></div>
+      <div><dt>Credits out</dt><dd id="s-credits">{{ fmt_num(live.money.circulating) }}</dd></div>
+      <div><dt>Unusuals</dt><dd id="s-unusuals">{{ fmt_num(live.item_stats.unusuals) }}</dd></div>
+    </dl>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head">Worlds &amp; instances</div>
+      <div class="panel-body flush">
+        <table class="grid" id="admin-worlds">
+          <tr><th>World</th><th>Players</th><th>Instances</th><th>Capacity</th><th>Visits</th><th>Tick</th><th>Status</th></tr>
+          {% for w in live.worlds %}
+          <tr data-world-row="{{ w.id }}">
+            <td><a href="/worlds/{{ w.id }}">{{ w.name }}</a></td>
+            <td class="p">{{ w.players }}</td>
+            <td class="i">{{ w.instances }}</td>
+            <td>{{ w.capacity }}/round</td>
+            <td class="v">{{ fmt_num(w.visits) }}</td>
+            <td class="t">{{ w.tick_ms }} ms</td>
+            <td class="s">{% if w.online %}<span class="pill green">running</span>{% else %}<span class="pill red">offline</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Host processes</div>
+      <div class="panel-body flush">
+        <table class="grid" id="admin-hosts">
+          <tr><th>World</th><th>PID</th><th>Port</th><th>Uptime</th><th>Restarts</th><th>Alive</th></tr>
+          {% for h in live.hosts %}
+          <tr><td>{{ h.world }}</td><td>{{ h.pid }}</td><td>{{ h.port }}</td>
+              <td>{{ int(h.uptime) }}s</td><td>{{ h.restarts }}</td>
+              <td>{% if h.alive %}<span class="pill green">yes</span>{% else %}<span class="pill red">no</span>{% endif %}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+      <div class="panel-foot">Web server pid {{ server.pid }} on port {{ server.port }} &bull; Python {{ server.python }}
+        &bull; database <code>{{ server.db }}</code></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head gold">Player management</div>
+      <div class="panel-body">
+        <form class="inline-form" method="get" action="/admin-dashboard" style="margin-bottom:8px">
+          <input type="search" name="q" value="{{ term }}" placeholder="Search players" style="width:220px">
+          <button class="btn">Search</button>
+        </form>
+        <table class="grid">
+          <tr><th>Player</th><th>Credits</th><th>Joined</th><th>Last seen</th><th>Status</th><th>Actions</th></tr>
+          {% for u in user_rows %}
+          <tr data-user-row="{{ u.username }}">
+            <td><a href="/profile/{{ u.username }}">{{ u.username }}</a>
+                {% if u.is_admin %}<span class="pill red">admin</span>{% endif %}</td>
+            <td class="credits">{{ fmt_num(u.credits) }}</td>
+            <td class="muted">{{ fmt_date(u.created_at) }}</td>
+            <td class="muted">{{ ago(u.last_seen) }}</td>
+            <td>{% if u.is_banned %}<span class="pill red">suspended</span>{% else %}<span class="pill green">active</span>{% endif %}</td>
+            <td class="nowrap">
+              <button class="btn small" data-admin-open="{{ u.username }}">Manage</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-side">
+    <div class="panel">
+      <div class="panel-head purple">Adjust credits</div>
+      <div class="panel-body">
+        <p class="tiny muted">Runs through the same ledgered <code>economy.adjust()</code> path the game and
+          market use, so every change is recorded and auditable.</p>
+        <div class="field"><label>Player</label><input type="text" id="cr-user" placeholder="username"></div>
+        <div class="field"><label>Amount</label><input type="number" id="cr-amount" value="1000"></div>
+        <div class="field"><label>Mode</label>
+          <select id="cr-mode"><option value="add">Add / subtract</option><option value="set">Set balance to</option></select></div>
+        <div class="field"><label>Reason</label><input type="text" id="cr-reason" placeholder="e.g. event prize"></div>
+        <button class="btn primary block" id="cr-go">Apply adjustment</button>
+        <div id="cr-result" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Grant an item</div>
+      <div class="panel-body">
+        <div class="field"><label>Player</label><input type="text" id="gr-user" placeholder="username"></div>
+        <div class="field"><label>Item</label>
+          <select id="gr-item">
+            {% for it in catalogue %}<option value="{{ it.id }}">{{ it.name }} ({{ it.slot }})</option>{% endfor %}
+          </select></div>
+        <div class="field"><label>Tier</label>
+          <select id="gr-tier"><option value="normal">Normal</option><option value="unusual">Unusual (hats only)</option></select></div>
+        <div class="field"><label>Effect</label>
+          <select id="gr-effect"><option value="">Random</option>
+            {% for eid, e in effects.items() %}<option value="{{ eid }}">{{ e.name }}</option>{% endfor %}
+          </select></div>
+        <button class="btn go block" id="gr-go">Grant item</button>
+        <div id="gr-result" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Recent credit movements</div>
+      <div class="panel-body flush">
+        <table class="grid">
+          {% for row in ledger %}
+          <tr><td class="tiny"><a href="/profile/{{ row.username }}">{{ row.username }}</a><br>
+              <span class="muted">{{ row.reason }}</span></td>
+              <td class="right" style="color:{{ '#275e2b' if row.delta > 0 else '#8c1c15' }}">
+                {{ '+' if row.delta > 0 else '' }}{{ fmt_num(row.delta) }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Audit log</div>
+      <div class="panel-body flush scroll" style="max-height:280px">
+        <table class="grid">
+          {% for row in audit %}
+          <tr><td class="tiny"><b>{{ row.action }}</b> {{ row.target }}<br>
+              <span class="muted">{{ row.username if row.username else 'system' }} &bull; {{ ago(row.created_at) }}</span></td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="admin-modal" class="hidden" style="position:fixed;inset:0;background:rgba(8,16,26,.7);z-index:900;display:flex;align-items:center;justify-content:center">
+  <div class="panel" style="width:640px;max-height:86vh;overflow:auto;margin:0">
+    <div class="panel-head" id="am-title">Player</div>
+    <div class="panel-body" id="am-body"></div>
+    <div class="panel-foot right"><button class="btn" id="am-close">Close</button></div>
+  </div>
+</div>
+{% set page_script = "/static/js/ui/admin.js" %}
+{% include "partials/foot.html" %}

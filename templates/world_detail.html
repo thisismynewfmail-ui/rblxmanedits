@@ -1,0 +1,117 @@
+{% include "partials/head.html" %}
+<div class="row">
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head">{{ world.name }}</div>
+      <div class="panel-body">
+        <div style="height:260px;border:1px solid #b7cadb;border-radius:4px;overflow:hidden;margin-bottom:10px">
+          <canvas class="world-shot" width="960" height="520" style="width:100%;height:100%"
+                  data-world="{{ world.thumb }}" data-colors="{{ to_json(world.colors) }}"
+                  data-name="{{ world.name }}" data-big="1"></canvas>
+        </div>
+        <div class="spread">
+          <div>
+            <h1 style="margin:0">{{ world.name }}</h1>
+            <div class="muted">by <b>{{ world.creator }}</b> &bull; {{ world.genre }}</div>
+          </div>
+          <div class="right">
+            <a class="btn go big" href="/{{ world.id }}">&#9658; Load</a>
+          </div>
+        </div>
+        <p style="margin-top:10px;font-size:12px">{{ world.description }}</p>
+        <div class="row tight" style="margin-top:10px">
+          {% for f in world.features %}<span class="pill">{{ f }}</span>{% endfor %}
+        </div>
+      </div>
+      <div class="panel-foot spread">
+        <span>
+          {% if user %}
+          <button class="btn small {{ 'go' if vote == 1 else '' }}" data-vote="up" data-world="{{ world.id }}">&#9650; Like</button>
+          <button class="btn small {{ 'danger' if vote == -1 else '' }}" data-vote="down" data-world="{{ world.id }}">&#9660; Dislike</button>
+          <button class="btn small {{ 'primary' if favourite else '' }}" data-fav="{{ world.id }}">
+            {{ '&#9733; Favourited' if favourite else '&#9734; Favourite' }}</button>
+          {% endif %}
+        </span>
+        <span class="muted"><span id="rating-value">{{ stats.rating }}</span>% liked by
+          <span id="rating-votes">{{ stats.rating_votes }}</span> players</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head green">Live instances</div>
+      <div class="panel-body flush">
+        <table class="grid" data-instances="{{ world.id }}">
+          <tr><th>Instance</th><th>Players</th><th>Phase</th><th>Round</th><th></th></tr>
+          {% for inst in status.instance_list %}
+          <tr>
+            <td>#{{ inst.id }}</td><td>{{ inst.count }}/{{ inst.max }}</td>
+            <td>{{ inst.phase }}</td><td>{{ inst.round }}</td>
+            <td class="right"><a class="btn small go" href="/{{ world.id }}?instance={{ inst.id }}">Join</a></td>
+          </tr>
+          {% endfor %}
+          {% if not status.instance_list %}
+          <tr><td colspan="5" class="muted">Nobody is playing right now. Press Load to open the first instance.</td></tr>
+          {% endif %}
+        </table>
+      </div>
+      <div class="panel-foot">Server capacity is <b>{{ world.max_players }}</b> players per instance.
+        When an instance fills, the host opens another one automatically.</div>
+    </div>
+  </div>
+
+  <div class="col-narrow">
+    <div class="panel">
+      <div class="panel-head gold">Statistics</div>
+      <div class="panel-body">
+        <dl class="stats">
+          <div><dt>Playing</dt><dd data-live-players="{{ world.id }}">{{ status.players }}</dd></div>
+          <div><dt>Instances</dt><dd data-live-instances="{{ world.id }}">{{ status.instances }}</dd></div>
+          <div><dt>Visits</dt><dd>{{ fmt_num(stats.visits) }}</dd></div>
+          <div><dt>Favourites</dt><dd>{{ fmt_num(stats.favourites) }}</dd></div>
+          <div><dt>Peak</dt><dd>{{ fmt_num(stats.peak_players) }}</dd></div>
+          <div><dt>Max/round</dt><dd>{{ world.max_players }}</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">In game now</div>
+      <div class="panel-body">
+        {% for p in players %}
+        <div class="spread" style="padding:3px 0">
+          <a href="/profile/{{ p.name }}">{{ p.name }}</a>
+          <span class="tiny muted">#{{ p.instance }}</span>
+        </div>
+        {% endfor %}
+        {% if not players %}<p class="muted tiny">Nobody in game.</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Top scores</div>
+      <div class="panel-body">
+        <table class="grid">
+          <tr><th>#</th><th>Player</th><th class="right">Score</th></tr>
+          {% for row in leaderboard %}
+          <tr><td>{{ loop.index }}</td><td><a href="/profile/{{ row.username }}">{{ row.username }}</a></td>
+              <td class="right">{{ fmt_num(row.score) }}</td></tr>
+          {% endfor %}
+        </table>
+        {% if not leaderboard %}<p class="muted tiny">No scores recorded yet.</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Recent visits</div>
+      <div class="panel-body">
+        {% for v in recent_visits %}
+        <div class="tiny" style="padding:2px 0"><a href="/profile/{{ v.username }}">{{ v.username }}</a>
+          <span class="muted">{{ ago(v.created_at) }}</span></div>
+        {% endfor %}
+        {% if not recent_visits %}<p class="muted tiny">No visits yet. A visit is logged after 30 seconds of play.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% set page_script = "/static/js/ui/worlds.js" %}
+{% include "partials/foot.html" %}

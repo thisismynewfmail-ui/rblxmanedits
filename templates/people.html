@@ -1,0 +1,39 @@
+{% include "partials/head.html" %}
+<div class="panel">
+  <div class="panel-head">
+    <span>People</span><span class="head-links">{{ fmt_num(total) }} registered builders</span>
+  </div>
+  <div class="panel-body">
+    <form class="inline-form" method="get" action="/users" style="margin-bottom:10px">
+      <input type="search" name="q" value="{{ term }}" placeholder="Find a player" style="width:240px">
+      <button class="btn">Search</button>
+    </form>
+    <div class="itemgrid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+      {% for r in rows %}
+      <div class="item" style="text-align:center">
+        <div class="thumb-wrap" style="background:linear-gradient(160deg,#eaf4ff,#c6ddf2);height:130px">
+          <a href="/profile/{{ r.user.username }}">
+            <canvas class="thumb avatar-thumb" width="200" height="200" data-user="{{ r.user.username }}"></canvas>
+          </a>
+        </div>
+        <div class="meta">
+          <a class="iname" href="/profile/{{ r.user.username }}">{{ r.user.username }}</a>
+          <span class="islot"><span class="dot {{ 'on' if r.online else 'off' }}"></span>
+            {{ 'Online' if r.online else ago(r.user.last_seen) }}</span>
+          <div class="tiny muted">{{ r.friends }} friends</div>
+          {% if user and r.user.id != user.id %}
+          <div style="margin-top:5px">
+            <button class="btn small go" data-friend="request" data-username="{{ r.user.username }}"
+                    {{ 'disabled' if r.status != 'none' else '' }}>
+              {{ 'Friends' if r.status == 'friends' else ('Pending' if r.status != 'none' else 'Add') }}</button>
+            <button class="btn small" data-follow-toggle="{{ r.user.username }}">{{ 'Unfollow' if r.following else 'Follow' }}</button>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% if not rows %}<p class="muted">Nobody matches that.</p>{% endif %}
+  </div>
+</div>
+{% include "partials/foot.html" %}

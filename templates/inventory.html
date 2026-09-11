@@ -1,0 +1,76 @@
+{% include "partials/head.html" %}
+<div class="row">
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head green">
+        <span>My Inventory</span>
+        <span class="head-links">{{ summary.total }} items &bull; {{ summary.unusual }} Unusual</span>
+      </div>
+      <div class="panel-body">
+        <div class="tabs">
+          {% for t in tabs %}
+          <a href="/inventory?slot={{ t[0] }}" class="{{ 'on' if slot == t[0] else '' }}">{{ t[1] }}</a>
+          {% endfor %}
+        </div>
+        <div class="itemgrid">
+          {% for it in items %}
+          <div class="item tier-{{ it.tier }}" data-inv="{{ it.inv_id }}">
+            <div class="thumb-wrap">
+              <canvas class="thumb item-thumb" width="216" height="216"
+                      data-item="{{ it.item_id }}" data-effect="{{ it.effect }}"></canvas>
+              <span class="tier-flag {{ it.tier }}">{{ it.tier_label }}</span>
+              {% if it.inv_id in equipped %}<span class="owned-flag">Worn</span>
+              {% elif it.inv_id in hotbar %}<span class="owned-flag">Hotbar</span>{% endif %}
+              {% if it.effect_name %}<span class="effect-flag">{{ it.effect_name }}</span>{% endif %}
+            </div>
+            <div class="meta">
+              <span class="iname" title="{{ it.name }}">{{ it.name }}</span>
+              <span class="islot">{{ it.slot_label }} &bull; #{{ it.serial }}</span>
+              <div class="spread" style="margin-top:5px">
+                {% if it.slot == 'usable' %}
+                <a class="btn small" href="/avatar#hotbar">Hotbar</a>
+                {% else %}
+                <button class="btn small primary" data-equip-inv="{{ it.inv_id }}" data-slot="{{ it.slot }}">Wear</button>
+                {% endif %}
+                {% if not it.is_default %}
+                <button class="btn small" data-sell="{{ it.inv_id }}" data-name="{{ it.name }}"
+                        title="Sell back for 40%">Sell</button>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% if not items %}<p class="muted">Nothing in this category. <a href="/market">Go shopping</a>.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-narrow">
+    <div class="panel">
+      <div class="panel-head gold">Wallet</div>
+      <div class="panel-body center">
+        <div style="font-size:26px;font-weight:bold;color:#1b3d5f">
+          <span class="coin" style="width:18px;height:18px;display:inline-block;border-radius:50%;background:radial-gradient(circle at 32% 30%,#ffe9a1,#e0a615 62%,#a97a06);border:1px solid #7a5804;vertical-align:-2px"></span>
+          <span id="wallet-big">{{ fmt_num(user.credits) }}</span>
+        </div>
+        <a class="btn primary block" style="margin-top:8px" href="/market">Spend it</a>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">Recent transactions</div>
+      <div class="panel-body">
+        <table class="grid">
+          {% for row in ledger %}
+          <tr>
+            <td class="tiny">{{ row.reason }}<div class="muted">{{ ago(row.created_at) }}</div></td>
+            <td class="right" style="color:{{ '#275e2b' if row.delta > 0 else '#8c1c15' }}">
+              {{ '+' if row.delta > 0 else '' }}{{ fmt_num(row.delta) }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% set page_script = "/static/js/ui/inventory.js" %}
+{% include "partials/foot.html" %}

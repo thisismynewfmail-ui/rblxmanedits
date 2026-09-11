@@ -1,0 +1,21 @@
+{% include "partials/head.html" %}
+<div class="panel">
+  <div class="panel-head">{{ message.subject }}</div>
+  <div class="panel-body">
+    <div class="spread" style="border-bottom:1px dotted #cfdbe5;padding-bottom:6px;margin-bottom:8px">
+      <div>From <a href="/profile/{{ message.sender_name }}">{{ message.sender_name }}</a>
+           to <a href="/profile/{{ message.recipient_name }}">{{ message.recipient_name }}</a></div>
+      <div class="muted">{{ fmt_time(message.created_at) }}</div>
+    </div>
+    <div style="white-space:pre-wrap;line-height:1.6;font-size:12px">{{ message.body }}</div>
+  </div>
+  <div class="panel-foot">
+    <a class="btn small" href="/messages/compose?to={{ message.sender_name }}&subject=RE: {{ message.subject }}">Reply</a>
+    <form method="post" action="/messages/{{ message.id }}/delete" style="display:inline">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn small danger">Delete</button>
+    </form>
+    <a class="btn small" href="/messages">Back to inbox</a>
+  </div>
+</div>
+{% include "partials/foot.html" %}

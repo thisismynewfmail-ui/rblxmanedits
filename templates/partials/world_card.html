@@ -1,0 +1,30 @@
+<div class="worldcard">
+  <a class="shot" href="/worlds/{{ row.world.id }}">
+    <canvas class="world-shot" width="600" height="320"
+            data-world="{{ row.world.thumb }}"
+            data-colors="{{ to_json(row.world.colors) }}"
+            data-name="{{ row.world.name }}"></canvas>
+    <span class="live"><span class="dot {{ 'game' if row.status.players else 'off' }}"></span>
+      <span data-live-players="{{ row.world.id }}">{{ row.status.players }}</span> playing</span>
+    <span class="genre">{{ row.world.genre }}</span>
+  </a>
+  <div class="wbody">
+    <div class="spread">
+      <a class="wtitle" href="/worlds/{{ row.world.id }}">{{ row.world.name }}</a>
+      <span class="pill">{{ row.world.max_players }} max</span>
+    </div>
+    <div class="wtag">{{ row.world.tagline }}</div>
+    <div class="wstats">
+      <span><b data-live-instances="{{ row.world.id }}">{{ row.status.instances }}</b> instance{{ '' if row.status.instances == 1 else 's' }}</span>
+      <span><b>{{ fmt_num(row.stats.visits) }}</b> visits</span>
+      <span><b>{{ row.stats.rating }}%</b> liked</span>
+    </div>
+    <div class="ratingbar" title="{{ row.stats.likes }} likes / {{ row.stats.dislikes }} dislikes">
+      <i style="width:{{ row.stats.rating }}%"></i>
+    </div>
+    <div style="margin-top:8px" class="spread">
+      <a class="btn go" href="/{{ row.world.id }}">&#9658; Load</a>
+      <a class="btn small" href="/worlds/{{ row.world.id }}">Details</a>
+    </div>
+  </div>
+</div>

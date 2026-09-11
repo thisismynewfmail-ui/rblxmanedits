@@ -1,0 +1,37 @@
+{% include "partials/head.html" %}
+<div class="row">
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head green">Create your account</div>
+      <div class="panel-body">
+        {% if error %}<div class="notice bad">{{ error }}</div>{% endif %}
+        <form method="post" action="/register">
+          <div class="field"><label for="u">Username</label>
+            <input id="u" type="text" name="username" value="{{ username }}" maxlength="20" autofocus>
+            <small class="muted">3&ndash;20 characters. Letters, numbers and underscores.</small></div>
+          <div class="field"><label for="p">Password</label>
+            <input id="p" type="password" name="password" autocomplete="new-password"></div>
+          <div class="field"><label for="c">Confirm password</label>
+            <input id="c" type="password" name="confirm" autocomplete="new-password"></div>
+          <button class="btn go big" type="submit">Join {{ SITE_NAME }}</button>
+          <a class="btn big" href="/login">I already have an account</a>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-side">
+    <div class="panel">
+      <div class="panel-head">What you get</div>
+      <div class="panel-body">
+        <ul style="padding-left:16px;line-height:1.8;margin:0">
+          <li><b>2,000 credits</b> to spend in the market</li>
+          <li>A Basic Pistol, Basic Shotgun and Basic Stick</li>
+          <li>A fully customisable avatar with six colourable body parts</li>
+          <li>Five hotbar slots for your usable items</li>
+          <li>Three worlds to play right now</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% include "partials/foot.html" %}

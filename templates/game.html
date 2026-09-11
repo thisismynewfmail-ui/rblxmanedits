@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ world.name }} | {{ SITE_NAME }}</title>
+<link rel="stylesheet" href="/static/css/game.css">
+<link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+<script>
+window.BH = {
+  csrf: "{{ csrf }}",
+  user: {"id": {{ user.id }}, "name": "{{ user.username }}", "admin": {{ 1 if user.is_admin else 0 }}},
+  world: {{& to_json(world) }},
+  avatar: {{& to_json(avatar) }},
+  instance: "{{ instance }}"
+};
+</script>
+</head>
+<body>
+<div id="game-root">
+  <canvas id="view"></canvas>
+
+  <div class="hud">
+    <div id="topleft">
+      <span class="badge2" id="world-name">{{ world.name }}</span>
+      <span class="badge2" id="instance-badge">instance --</span>
+      <span class="badge2" id="view-badge">1st person</span>
+      <span class="badge2" id="ping-badge">-- ms</span>
+    </div>
+    <div id="perf"></div>
+
+    <div id="objective">
+      <div class="score"><span class="red" id="score-red">0</span>
+        <span style="font-size:12px;opacity:.7" id="score-mode">{{ world.round_label }}</span>
+        <span class="blue" id="score-blue">0</span></div>
+      <div class="timer" id="obj-timer"></div>
+      <div class="sub" id="obj-sub"></div>
+      <div id="cartbar" style="display:none"><div class="fill"></div><div class="cart"></div></div>
+    </div>
+
+    <div id="killfeed"></div>
+
+    <div id="chat-wrap">
+      <div id="chat-log"></div>
+      <div id="chat-input-wrap">
+        <span id="chat-scope">ALL</span>
+        <input id="chat-input" maxlength="160" autocomplete="off" spellcheck="false"
+               placeholder="Say something and press Enter (Esc cancels)">
+      </div>
+    </div>
+
+    <div id="health-wrap">
+      <div class="label">HEALTH</div>
+      <div id="health-bar"><div id="health-fill"></div></div>
+      <div id="health-text">100</div>
+    </div>
+
+    <div id="ammo"><div class="mag">--</div><div class="res"></div><div class="wname"></div></div>
+    <div id="coins"><span class="c">&#9679;</span> <span id="coin-amount">0</span> coins</div>
+    <div id="hotbar-hud"></div>
+
+    <div id="crosshair"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="dot"></i></div>
+    <div id="hitmarker"><svg viewBox="0 0 34 34"><g stroke="#ff4d3d" stroke-width="3" stroke-linecap="round">
+      <line x1="6" y1="6" x2="13" y2="13"/><line x1="28" y1="6" x2="21" y2="13"/>
+      <line x1="6" y1="28" x2="13" y2="21"/><line x1="28" y1="28" x2="21" y2="21"/></g></svg></div>
+    <div id="damage-flash"></div>
+    <div id="hurt-arrows"></div>
+    <div id="toast-wrap"></div>
+    <div id="prompt"></div>
+
+    <div id="respawn"><div class="big" id="respawn-count">3</div>
+      <div class="sub" id="respawn-by"></div>
+      <div class="sub" style="opacity:.7">Respawning...</div></div>
+
+    <div id="scoreboard">
+      <h2 id="sb-title">Scoreboard</h2>
+      <table><thead><tr><th>Player</th><th>Team</th><th>Kills</th><th>Deaths</th><th>Score</th></tr></thead>
+      <tbody id="sb-body"></tbody></table>
+      <div style="margin-top:6px;font-size:10px;opacity:.7">Double click a name to open that profile in a new tab.</div>
+    </div>
+
+    <div id="vote">
+      <h3>Shuffle the teams?</h3>
+      <div class="count"><span id="vote-yes">0</span> / <span id="vote-need">0</span></div>
+      <div class="bar"><i id="vote-bar" style="width:0%"></i></div>
+      <div style="display:flex;gap:4%">
+        <button class="yes" id="vote-yes-btn">Yes</button>
+        <button class="no" id="vote-no-btn">No</button>
+      </div>
+      <div class="timer"><span id="vote-timer">30</span>s left &bull; needs 80%</div>
+    </div>
+
+    <div class="overlay" id="pause">
+      <div class="menu">
+        <div class="mhead"><span>Paused</span><span id="pause-world">{{ world.name }}</span></div>
+        <div class="mbody">
+          <button class="primary" id="btn-resume">Resume</button>
+          <button id="btn-settings">Settings &amp; key bindings</button>
+          <button id="btn-thirdperson">Toggle camera (P)</button>
+          <button id="btn-help">Controls</button>
+          <a class="btn" href="/worlds">Back to the world browser</a>
+          <button class="danger" id="btn-quit">Quit to my profile</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="settings">
+      <div class="menu">
+        <div class="mhead"><span>Settings</span><span>Saved in this browser</span></div>
+        <div class="mbody">
+          <h3>Mouse &amp; camera</h3>
+          <div class="rowline"><label>Sensitivity</label>
+            <input type="range" id="set-sens" min="0.02" max="0.6" step="0.01"><span class="val" id="val-sens"></span></div>
+          <div class="rowline"><label>Field of view</label>
+            <input type="range" id="set-fov" min="60" max="110" step="1"><span class="val" id="val-fov"></span></div>
+          <div class="rowline"><label>Invert Y</label><input type="checkbox" id="set-invert"></div>
+          <h3>Display</h3>
+          <div class="rowline"><label>Render scale</label>
+            <input type="range" id="set-scale" min="0.5" max="1" step="0.05"><span class="val" id="val-scale"></span></div>
+          <div class="rowline"><label>View distance</label>
+            <input type="range" id="set-far" min="300" max="1400" step="50"><span class="val" id="val-far"></span></div>
+          <div class="rowline"><label>Particles</label><input type="checkbox" id="set-particles"></div>
+          <div class="rowline"><label>Show names</label><input type="checkbox" id="set-names"></div>
+          <h3>Audio</h3>
+          <div class="rowline"><label>Volume</label>
+            <input type="range" id="set-vol" min="0" max="1" step="0.05"><span class="val" id="val-vol"></span></div>
+          <h3>Key bindings</h3>
+          <div id="keybinds"></div>
+          <button id="btn-defaults">Reset to defaults</button>
+          <button class="primary" id="btn-settings-close">Back</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="helpbox">
+      <div class="menu">
+        <div class="mhead"><span>Controls</span></div>
+        <div class="mbody" id="help-body"></div>
+      </div>
+    </div>
+
+    <div class="overlay" id="endcard">
+      <div class="menu">
+        <div class="mhead"><span id="end-title">Round over</span></div>
+        <div class="mbody center" id="end-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading">
+    <h1>{{ world.name }}</h1>
+    <div class="tag">{{ world.tagline }}</div>
+    <div class="bar"><i id="load-bar"></i></div>
+    <div class="msg" id="load-msg">Connecting to the game host...</div>
+    <div class="tips">Y opens chat &bull; P toggles first/third person &bull; Tab shows the scoreboard
+      &bull; Esc pauses. Double click a name in chat to open their profile.</div>
+  </div>
+</div>
+
+<script src="/static/js/engine/gl.js"></script>
+<script src="/static/js/engine/geometry.js"></script>
+<script src="/static/js/engine/textures.js"></script>
+<script src="/static/js/engine/renderer.js"></script>
+<script src="/static/js/engine/avatar.js"></script>
+<script src="/static/js/engine/particles.js"></script>
+<script src="/static/js/engine/audio.js"></script>
+<script src="/static/js/ui/thumbs.js"></script>
+<script src="/static/js/game/settings.js"></script>
+<script src="/static/js/game/net.js"></script>
+<script src="/static/js/game/physics.js"></script>
+<script src="/static/js/game/hud.js"></script>
+<script src="/static/js/game/world_extras.js"></script>
+<script src="/static/js/game/client.js"></script>
+</body>
+</html>

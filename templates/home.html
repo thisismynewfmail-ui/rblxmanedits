@@ -1,0 +1,150 @@
+{% include "partials/head.html" %}
+<div class="row">
+  <div class="col-side">
+    <div class="panel">
+      <div class="panel-head">{{ user.username }}</div>
+      <div class="panel-body">
+        <div class="avatar-view" style="height:230px" data-avatar="{{ to_json(avatar) }}"></div>
+        <div style="margin-top:8px" class="spread">
+          <a class="btn small" href="/avatar">Edit avatar</a>
+          <a class="btn small" href="/profile/{{ user.username }}">My profile</a>
+        </div>
+        <hr>
+        <dl class="kv">
+          <dt>Credits</dt><dd>{{ fmt_num(user.credits) }}</dd>
+          <dt>Friends</dt><dd>{{ nav_friends }}</dd>
+          <dt>Place visits</dt><dd>{{ fmt_num(user.place_visits) }}</dd>
+          <dt>Kills</dt><dd>{{ fmt_num(stats.total.kills) }}</dd>
+          <dt>K/D</dt><dd>{{ stats.total.kdr }}</dd>
+          <dt>Member since</dt><dd>{{ fmt_date(user.created_at) }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    {% if requests %}
+    <div class="panel">
+      <div class="panel-head red">Friend requests ({{ nav_requests }})</div>
+      <div class="panel-body">
+        {% for r in requests %}
+        <div class="spread" style="margin-bottom:6px">
+          <a href="/profile/{{ r.username }}">{{ r.username }}</a>
+          <span>
+            <button class="btn small go" data-friend="accept" data-username="{{ r.username }}">Accept</button>
+            <button class="btn small" data-friend="decline" data-username="{{ r.username }}">No</button>
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="panel-foot"><a href="/friends?tab=requests">See all requests</a></div>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+      <div class="panel-head green">Friends ({{ nav_friends }})</div>
+      <div class="panel-body">
+        {% if friends_list %}
+        <div class="userlist">
+          {% for f in friends_list %}
+          <a class="usercard" href="/profile/{{ f.username }}" title="{{ f.username }}">
+            <canvas class="thumb avatar-thumb" width="156" height="156" data-user="{{ f.username }}"></canvas>
+            <span class="uname">{{ f.username }}</span>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="muted">No friends yet. <a href="/users">Find some people</a>.</p>
+        {% endif %}
+      </div>
+      <div class="panel-foot"><a href="/friends">Manage friends</a></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Online now</div>
+      <div class="panel-body">
+        <table class="grid">
+          {% for u in online %}
+          <tr><td><span class="dot on"></span> <a href="/profile/{{ u.username }}">{{ u.username }}</a></td>
+              <td class="right tiny muted">{{ ago(u.last_seen) }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head">Jump back in</div>
+      <div class="panel-body">
+        <div class="worldgrid">
+          {% for row in worlds %}{% include "partials/world_card.html" %}{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head green">Say something</div>
+      <div class="panel-body">
+        <form id="post-form" onsubmit="return false">
+          <textarea id="post-body" maxlength="400" placeholder="What are you building today?"></textarea>
+          <div class="spread" style="margin-top:6px">
+            <small class="muted"><span id="post-count">400</span> characters left</small>
+            <button class="btn primary" id="post-submit">Post</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Your timeline</div>
+      <div class="panel-body" id="timeline">
+        {% if timeline %}
+          {% for p in timeline %}{% set post = p %}{% include "partials/post.html" %}{% endfor %}
+        {% else %}
+          <p class="muted">Nothing here yet. Follow a few people or post something.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-narrow">
+    <div class="panel">
+      <div class="panel-head gold">Leaderboard</div>
+      <div class="panel-body">
+        <table class="grid">
+          <tr><th>#</th><th>Player</th><th class="right">Score</th></tr>
+          {% for row in leaderboard %}
+          <tr><td>{{ loop.index }}</td>
+              <td><a href="/profile/{{ row.username }}">{{ row.username }}</a></td>
+              <td class="right">{{ fmt_num(row.score) }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Site activity</div>
+      <div class="panel-body">
+        {% for e in activity %}
+        <div style="padding:4px 0;border-bottom:1px dotted #cfdbe5">
+          <a href="/profile/{{ e.username }}">{{ e.username }}</a>
+          <span class="{{ 'pill purple' if e.kind == 'unusual' else '' }}">{{ e.text }}</span>
+          <div class="tiny muted">{{ ago(e.at) }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head purple">Latest Unusuals</div>
+      <div class="panel-body">
+        {% for row in showcase %}
+        <div class="spread" style="padding:3px 0">
+          <a href="/profile/{{ row.username }}" class="tiny">{{ row.username }}</a>
+          <span class="pill purple tiny">{{ row.name }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% include "partials/foot.html" %}

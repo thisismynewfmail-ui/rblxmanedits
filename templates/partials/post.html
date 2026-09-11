@@ -1,0 +1,18 @@
+<div class="post" data-post="{{ post.id }}">
+  <div class="spread">
+    <div>
+      <a class="who" href="/profile/{{ post.username }}">{{ post.username }}</a>
+      <span class="when">{{ ago(post.created_at) }}</span>
+    </div>
+    {% if user and (user.id == post.user_id or is_admin) %}
+    <a class="tiny muted" data-post-delete="{{ post.id }}">delete</a>
+    {% endif %}
+  </div>
+  <div class="body">{{ post.body }}</div>
+  <div class="actions">
+    <a data-post-like="{{ post.id }}" class="{{ 'liked' if post.liked else '' }}">
+      &#9733; <span class="likecount">{{ post.likes }}</span> like{{ '' if post.likes == 1 else 's' }}</a>
+    <a data-post-comments="{{ post.id }}">&#9998; {{ post.comment_count }} comment{{ '' if post.comment_count == 1 else 's' }}</a>
+  </div>
+  <div class="comments hidden" data-comments-for="{{ post.id }}"></div>
+</div>

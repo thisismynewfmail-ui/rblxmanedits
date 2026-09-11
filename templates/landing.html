@@ -1,0 +1,96 @@
+{% include "partials/head.html" %}
+<div class="hero">
+  <div class="cloud" style="width:160px;height:34px;top:22px;animation-duration:52s"></div>
+  <div class="cloud" style="width:110px;height:26px;top:74px;animation-duration:38s;animation-delay:-12s"></div>
+  <div class="cloud" style="width:200px;height:40px;top:120px;animation-duration:64s;animation-delay:-30s"></div>
+  <div class="inner row">
+    <div class="col">
+      <h1>Build it. Play it. Live it.</h1>
+      <p>{{ SITE_NAME }} is a block world platform: make an avatar out of coloured bricks,
+         buy hats with a tiny chance of being <b style="color:#c78bff">Unusual</b>, then drop into
+         a first or third person shooter world with your friends.</p>
+      <p style="margin-top:12px">
+        <a class="btn go big" href="/register">Create a free account</a>
+        <a class="btn big" href="/worlds">Browse the worlds</a>
+      </p>
+    </div>
+    <div class="col-narrow">
+      <div class="avatar-view" style="height:220px" data-avatar-demo="1"></div>
+    </div>
+  </div>
+</div>
+
+<div class="row" style="margin-top:12px">
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head">Worlds you can play right now</div>
+      <div class="panel-body">
+        <div class="worldgrid">
+          {% for row in worlds %}{% include "partials/world_card.html" %}{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head green">How it works</div>
+      <div class="panel-body">
+        <div class="steps">
+          <div class="step"><span class="n">1</span><h3>Make an account</h3>
+            <p class="muted">You start with 2,000 credits and the standard kit.</p></div>
+          <div class="step"><span class="n">2</span><h3>Build your avatar</h3>
+            <p class="muted">Six colourable body parts, hats, faces, shirts, pants and a back slot.</p></div>
+          <div class="step"><span class="n">3</span><h3>Set your hotbar</h3>
+            <p class="muted">Five usable slots. Pistol, shotgun and stick to begin with.</p></div>
+          <div class="step"><span class="n">4</span><h3>Load a world</h3>
+            <p class="muted">Press Load and you are in. First person or third, your call.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-side">
+    <div class="panel">
+      <div class="panel-head gold">Site statistics</div>
+      <div class="panel-body">
+        <dl class="stats">
+          <div><dt>Builders</dt><dd>{{ fmt_num(site_stats.users) }}</dd></div>
+          <div><dt>Visits</dt><dd>{{ fmt_num(site_stats.visits) }}</dd></div>
+          <div><dt>Items owned</dt><dd>{{ fmt_num(site_stats.items_owned) }}</dd></div>
+          <div><dt>Posts</dt><dd>{{ fmt_num(site_stats.posts) }}</dd></div>
+          <div><dt>Friendships</dt><dd>{{ fmt_num(site_stats.friendships) }}</dd></div>
+          <div><dt>Unusuals</dt><dd>{{ fmt_num(site_stats.unusuals) }}</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head purple">Unusual sightings</div>
+      <div class="panel-body">
+        {% if showcase %}
+        <table class="grid">
+          {% for row in showcase %}
+          <tr><td><a href="/profile/{{ row.username }}">{{ row.username }}</a></td>
+              <td><span class="pill purple">{{ row.name }}</span></td>
+              <td class="tiny muted">{{ row.effect_name }}</td></tr>
+          {% endfor %}
+        </table>
+        {% else %}<p class="muted">Nobody has unboxed one yet. 0.5% is 0.5%.</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">Newest builders</div>
+      <div class="panel-body">
+        <div class="userlist">
+          {% for u in recent_users %}
+          <a class="usercard" href="/profile/{{ u.username }}">
+            <canvas class="thumb avatar-thumb" width="156" height="156" data-user="{{ u.username }}"></canvas>
+            <span class="uname">{{ u.username }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% include "partials/foot.html" %}

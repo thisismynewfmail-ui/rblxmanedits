@@ -1,0 +1,53 @@
+{% include "partials/head.html" %}
+<div class="row">
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head">Profile details</div>
+      <div class="panel-body">
+        <form method="post" action="/settings">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="action" value="profile">
+          <div class="field"><label>About me</label>
+            <textarea name="blurb" rows="4" maxlength="400">{{ user.blurb }}</textarea></div>
+          <div class="field"><label>Location</label>
+            <input type="text" name="location" value="{{ user.location }}" maxlength="60"></div>
+          <button class="btn primary">Save profile</button>
+        </form>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head red">Change password</div>
+      <div class="panel-body">
+        <form method="post" action="/settings">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="action" value="password">
+          <div class="field"><label>Current password</label><input type="password" name="current"></div>
+          <div class="field"><label>New password</label><input type="password" name="new"></div>
+          <button class="btn danger">Change password</button>
+          <small class="muted">You will be signed out everywhere.</small>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-narrow">
+    <div class="panel">
+      <div class="panel-head">Account</div>
+      <div class="panel-body">
+        <dl class="kv">
+          <dt>Username</dt><dd>{{ user.username }}</dd>
+          <dt>Credits</dt><dd>{{ fmt_num(user.credits) }}</dd>
+          <dt>Joined</dt><dd>{{ fmt_date(user.created_at) }}</dd>
+          <dt>Role</dt><dd>{{ 'Administrator' if user.is_admin else 'Builder' }}</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">In-game settings</div>
+      <div class="panel-body">
+        <p class="muted">Sensitivity, field of view and key bindings live in the pause menu inside a world
+          (press <b>Esc</b> while playing). They are stored in this browser.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% include "partials/foot.html" %}

@@ -1,0 +1,37 @@
+{% include "partials/head.html" %}
+<div class="panel">
+  <div class="panel-head">Search results for "{{ term }}"</div>
+  <div class="panel-body">
+    {% if not term %}<p class="muted">Type something into the search box up top.</p>{% endif %}
+    {% if worlds %}
+    <h2>Worlds</h2>
+    <ul>{% for w in worlds %}<li><a href="/worlds/{{ w.id }}">{{ w.name }}</a> &mdash; <span class="muted">{{ w.tagline }}</span></li>{% endfor %}</ul>
+    {% endif %}
+    {% if people %}
+    <h2>Players</h2>
+    <div class="userlist">
+      {% for u in people %}
+      <a class="usercard" href="/profile/{{ u.username }}">
+        <canvas class="thumb avatar-thumb" width="156" height="156" data-user="{{ u.username }}"></canvas>
+        <span class="uname">{{ u.username }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if items %}
+    <h2 style="margin-top:12px">Items</h2>
+    <div class="itemgrid">
+      {% for it in items %}
+      <div class="item">
+        <div class="thumb-wrap"><canvas class="thumb item-thumb" width="216" height="216" data-item="{{ it.id }}"></canvas></div>
+        <div class="meta"><span class="iname">{{ it.name }}</span>
+          <span class="islot">{{ it.slot_label }}</span>
+          <div class="price"><span class="coin"></span> {{ fmt_num(it.price) }}</div></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if term and not items and not people and not worlds %}<p class="muted">No results.</p>{% endif %}
+  </div>
+</div>
+{% include "partials/foot.html" %}

@@ -1,0 +1,66 @@
+{% include "partials/head.html" %}
+<div class="panel">
+  <div class="panel-head green">Friends &amp; following</div>
+  <div class="panel-body">
+    <div class="tabs">
+      <a href="/friends?tab=friends" class="{{ 'on' if tab == 'friends' else '' }}">Friends ({{ len(friends_list) }})</a>
+      <a href="/friends?tab=requests" class="{{ 'on' if tab == 'requests' else '' }}">Requests ({{ len(incoming) }})</a>
+      <a href="/friends?tab=sent" class="{{ 'on' if tab == 'sent' else '' }}">Sent ({{ len(outgoing) }})</a>
+      <a href="/friends?tab=followers" class="{{ 'on' if tab == 'followers' else '' }}">Followers ({{ counts.followers }})</a>
+      <a href="/friends?tab=following" class="{{ 'on' if tab == 'following' else '' }}">Following ({{ counts.following }})</a>
+    </div>
+
+    {% if tab == 'requests' %}
+      <table class="grid">
+        <tr><th>Player</th><th>Asked</th><th class="right">Action</th></tr>
+        {% for r in incoming %}
+        <tr>
+          <td><a href="/profile/{{ r.username }}">{{ r.username }}</a></td>
+          <td class="muted">{{ ago(r.requested_at) }}</td>
+          <td class="right">
+            <button class="btn small go" data-friend="accept" data-username="{{ r.username }}">Accept</button>
+            <button class="btn small" data-friend="decline" data-username="{{ r.username }}">Decline</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% if not incoming %}<p class="muted">No pending requests.</p>{% endif %}
+
+    {% elif tab == 'sent' %}
+      <table class="grid">
+        <tr><th>Player</th><th>Sent</th><th class="right">Action</th></tr>
+        {% for r in outgoing %}
+        <tr><td><a href="/profile/{{ r.username }}">{{ r.username }}</a></td>
+            <td class="muted">{{ ago(r.requested_at) }}</td>
+            <td class="right"><button class="btn small" data-friend="decline" data-username="{{ r.username }}">Cancel</button></td></tr>
+        {% endfor %}
+      </table>
+      {% if not outgoing %}<p class="muted">No outgoing requests.</p>{% endif %}
+
+    {% elif tab == 'followers' or tab == 'following' %}
+      {% set people = followers if tab == 'followers' else following %}
+      <div class="userlist">
+        {% for f in people %}
+        <a class="usercard" href="/profile/{{ f.username }}">
+          <canvas class="thumb avatar-thumb" width="156" height="156" data-user="{{ f.username }}"></canvas>
+          <span class="uname">{{ f.username }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% if not people %}<p class="muted">Nobody here yet.</p>{% endif %}
+
+    {% else %}
+      <div class="userlist">
+        {% for f in friends_list %}
+        <a class="usercard" href="/profile/{{ f.username }}">
+          <canvas class="thumb avatar-thumb" width="156" height="156" data-user="{{ f.username }}"></canvas>
+          <span class="uname">{{ f.username }}</span>
+          <span class="tiny"><span class="dot {{ 'on' if online_fn(f) else 'off' }}"></span></span>
+        </a>
+        {% endfor %}
+      </div>
+      {% if not friends_list %}<p class="muted">No friends yet &mdash; <a href="/users">browse the player list</a>.</p>{% endif %}
+    {% endif %}
+  </div>
+</div>
+{% include "partials/foot.html" %}

@@ -1,0 +1,10 @@
+{% include "partials/head.html" %}
+<div class="panel">
+  <div class="panel-head red">Error {{ status }} &mdash; {{ status_text }}</div>
+  <div class="panel-body center" style="padding:30px">
+    <div style="font-size:46px;font-weight:bold;color:#c4281c;text-shadow:2px 2px 0 rgba(0,0,0,.15)">{{ status }}</div>
+    <p style="font-size:12px">{{ message }}</p>
+    <p><a class="btn" href="/">Back to the home page</a> <a class="btn" href="/worlds">Go play something</a></p>
+  </div>
+</div>
+{% include "partials/foot.html" %}

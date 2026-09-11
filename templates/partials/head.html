@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ page_title }} | {{ SITE_NAME }}</title>
+<link rel="stylesheet" href="/static/css/site.css">
+<link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+<script>
+window.BH = {
+  csrf: "{{ csrf }}",
+  user: {% if user %}{"id": {{ user.id }}, "name": "{{ user.username }}", "credits": {{ user.credits }}, "admin": {{ 1 if user.is_admin else 0 }}}{% else %}null{% endif %},
+  path: "{{ path }}"
+};
+</script>
+</head>
+<body>
+<div class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">
+      <span class="brand-mark">BLOCKHAVEN</span>
+      <span class="brand-tag">{{ SITE_TAGLINE }}</span>
+    </a>
+    <form class="searchbox" action="/search" method="get">
+      <input type="search" name="q" placeholder="Search players, items, worlds" value="{{ search_term }}">
+      <button type="submit">Go</button>
+    </form>
+    <div class="topnav">
+      {% if user %}
+      <a href="/worlds" class="{{ 'on' if path == '/worlds' else '' }}">Worlds</a>
+      <a href="/market" class="{{ 'on' if path == '/market' else '' }}">Market</a>
+      <a href="/users">People</a>
+      {% if is_admin %}<a href="/admin-dashboard" class="{{ 'on' if path == '/admin-dashboard' else '' }}">Admin</a>{% endif %}
+      {% else %}
+      <a href="/worlds">Worlds</a>
+      <a href="/market">Market</a>
+      {% endif %}
+    </div>
+    {% if user %}
+    <a class="wallet" href="/inventory" title="Your credits"><span class="coin"></span> <span id="wallet-amount">{{ fmt_num(user.credits) }}</span></a>
+    <div class="topnav"><a href="/logout">Sign out</a></div>
+    {% else %}
+    <div class="topnav"><a href="/login">Sign in</a><a href="/register" class="on">Join</a></div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="tabbar">
+  <div class="wrap">
+    <a href="/" class="{{ 'on' if path == '/' else '' }}">Home</a>
+    {% if user %}
+    <a href="/profile/{{ user.username }}" class="{{ 'on' if path.startswith('/profile') else '' }}">Profile</a>
+    <a href="/messages" class="{{ 'on' if path.startswith('/messages') else '' }}">Messages{% if nav_unread %} <span class="badge alert">{{ nav_unread }}</span>{% endif %}</a>
+    <a href="/friends" class="{{ 'on' if path == '/friends' else '' }}">Friends{% if nav_requests %} <span class="badge">{{ nav_requests }}</span>{% endif %}</a>
+    <a href="/avatar" class="{{ 'on' if path == '/avatar' else '' }}">Avatar</a>
+    <a href="/inventory" class="{{ 'on' if path.startswith('/inventory') else '' }}">Inventory</a>
+    <a href="/worlds" class="{{ 'on' if path.startswith('/worlds') else '' }}">Worlds</a>
+    <a href="/market" class="{{ 'on' if path == '/market' else '' }}">Market</a>
+    <a href="/settings" class="{{ 'on' if path == '/settings' else '' }}">Settings</a>
+    {% else %}
+    <a href="/worlds">Worlds</a>
+    <a href="/market">Market</a>
+    <a href="/users">People</a>
+    <a href="/login">Sign in</a>
+    <a href="/register">Create account</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="ticker">
+  <div class="wrap">
+    <b>NEWS</b>
+    <span class="grow" style="overflow:hidden"><span class="ticker-track">{{ ticker }}</span></span>
+  </div>
+</div>
+
+<div class="wrap" style="padding-top:12px">
+{% if flash %}<div class="notice {{ flash.kind }}">{{ flash.text }}</div>{% endif %}

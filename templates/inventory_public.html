@@ -1,0 +1,28 @@
+{% include "partials/head.html" %}
+<div class="panel">
+  <div class="panel-head">
+    <span>{{ target.username }}'s inventory</span>
+    <span class="head-links">{{ summary.total }} items &bull; {{ summary.unusual }} Unusual &bull;
+      <a href="/profile/{{ target.username }}">back to profile</a></span>
+  </div>
+  <div class="panel-body">
+    <div class="itemgrid">
+      {% for it in items %}
+      <div class="item tier-{{ it.tier }}">
+        <div class="thumb-wrap">
+          <canvas class="thumb item-thumb" width="216" height="216"
+                  data-item="{{ it.item_id }}" data-effect="{{ it.effect }}"></canvas>
+          <span class="tier-flag {{ it.tier }}">{{ it.tier_label }}</span>
+          {% if it.effect_name %}<span class="effect-flag">{{ it.effect_name }}</span>{% endif %}
+        </div>
+        <div class="meta">
+          <span class="iname" title="{{ it.name }}">{{ it.name }}</span>
+          <span class="islot">{{ it.slot_label }} &bull; #{{ it.serial }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% if not items %}<p class="muted">This inventory is empty.</p>{% endif %}
+  </div>
+</div>
+{% include "partials/foot.html" %}

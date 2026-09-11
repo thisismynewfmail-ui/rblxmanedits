@@ -1,0 +1,114 @@
+{% include "partials/head.html" %}
+{% if welcome %}
+<div class="notice info">Welcome to {{ SITE_NAME }}! This is your avatar editor &mdash; pick your colours,
+put on a hat, then set up the five hotbar slots you take into a world.</div>
+{% endif %}
+<div class="row">
+  <div class="col-side">
+    <div class="panel">
+      <div class="panel-head">Avatar preview</div>
+      <div class="panel-body">
+        <div class="avatar-view" style="height:340px" id="avatar-preview" data-avatar="{{ to_json(avatar) }}">
+          <span class="tag3d">3D</span>
+          <span class="hint">drag to rotate &bull; scroll to zoom</span>
+        </div>
+        <div class="spread" style="margin-top:8px">
+          <button class="btn small" id="spin-toggle">Pause spin</button>
+          <a class="btn small" href="/profile/{{ user.username }}">View profile</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head gold">Body colours</div>
+      <div class="panel-body" id="body-colors">
+        {% for part in body_parts %}
+        <div class="field">
+          <div class="spread">
+            <label for="c-{{ part }}" style="margin:0">{{ part.replace('_', ' ').title() }}</label>
+            <span class="pill" id="hex-{{ part }}">{{ raw.colors[part] }}</span>
+          </div>
+          <div class="swatches" data-part="{{ part }}">
+            {% for c in palette %}
+            <span class="swatch {{ 'on' if raw.colors[part] == c.hex else '' }}"
+                  style="background:{{ c.hex }}" title="{{ c.name }}" data-color="{{ c.hex }}"></span>
+            {% endfor %}
+          </div>
+          <input type="color" id="c-{{ part }}" value="{{ raw.colors[part] }}" data-custom="{{ part }}"
+                 style="width:100%;height:22px;margin-top:4px;padding:0;border:1px solid #9fb6c9;border-radius:3px">
+        </div>
+        {% endfor %}
+      </div>
+      <div class="panel-foot"><span id="color-status" class="muted">Changes save automatically.</span></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head">
+        <span>Avatar Editor</span>
+        <span class="head-links"><a href="/market">Explore the market to find more clothes</a></span>
+      </div>
+      <div class="panel-body">
+        <div class="tabs" id="slot-tabs">
+          {% for slot in slots %}
+          <a data-slot-tab="{{ slot }}" class="{{ 'on' if loop.first else '' }}">{{ slot_labels[slot] }}</a>
+          {% endfor %}
+        </div>
+        {% for slot in slots %}
+        <div class="slotpanel {{ '' if loop.first else 'hidden' }}" data-slot-panel="{{ slot }}">
+          <div class="slotpick">
+            <div class="pick {{ 'on' if not raw.equipped.get(slot) else '' }}" data-equip="0" data-slot="{{ slot }}">
+              <canvas width="128" height="128" data-item="" ></canvas>
+              <span>None</span>
+            </div>
+            {% for it in by_slot.get(slot, []) %}
+            <div class="pick {{ 'on' if raw.equipped.get(slot) == it.inv_id else '' }} {{ 'unusual' if it.tier == 'unusual' else '' }}"
+                 data-equip="{{ it.inv_id }}" data-slot="{{ slot }}" title="{{ it.name }}{{ ' (Unusual: ' + it.effect_name + ')' if it.effect else '' }}">
+              <canvas width="128" height="128" class="item-thumb" data-item="{{ it.item_id }}" data-effect="{{ it.effect }}"></canvas>
+              <span>{{ it.name }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% if not by_slot.get(slot, []) %}
+          <p class="muted" style="margin-top:8px">You do not own anything for this slot yet &mdash;
+             <a href="/market?slot={{ slot }}">visit the market</a>.</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head green">Hotbar &mdash; your five usable slots</div>
+      <div class="panel-body">
+        <p class="muted">These are the items you carry into a world. Press <b>1</b>&ndash;<b>5</b> in game to switch.</p>
+        <div class="hotbar" id="hotbar">
+          {% for i in range(hotbar_size) %}
+          <div class="hotslot {{ 'on' if raw.hotbar[i] else '' }}" data-hotslot="{{ i }}">
+            <span class="num">{{ i + 1 }}</span>
+            <canvas width="128" height="128" class="item-thumb" data-hot-canvas="{{ i }}"></canvas>
+            <span data-hot-name="{{ i }}">empty</span>
+          </div>
+          {% endfor %}
+        </div>
+        <hr>
+        <h3>Usable items you own</h3>
+        <div class="slotpick" id="usable-pool">
+          {% for it in by_slot.get('usable', []) %}
+          <div class="pick" data-usable="{{ it.inv_id }}" title="{{ it.name }}">
+            <canvas width="128" height="128" class="item-thumb" data-item="{{ it.item_id }}"></canvas>
+            <span>{{ it.name }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        <p class="tiny muted" style="margin-top:6px">Click a hotbar slot, then click an item to put it there.
+           Click a slot and press <b>Clear</b> to empty it.</p>
+        <button class="btn small" id="clear-slot">Clear selected slot</button>
+        <span id="hotbar-status" class="muted"></span>
+      </div>
+    </div>
+  </div>
+</div>
+{% set page_script = "/static/js/ui/avatar_editor.js" %}
+{% include "partials/foot.html" %}

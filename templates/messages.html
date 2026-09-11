@@ -1,0 +1,25 @@
+{% include "partials/head.html" %}
+<div class="panel">
+  <div class="panel-head">
+    <span>Messages</span>
+    <span class="head-links"><a href="/messages/compose">Compose a new message</a></span>
+  </div>
+  <div class="panel-body">
+    <div class="tabs">
+      <a href="/messages?box=inbox" class="{{ 'on' if box == 'inbox' else '' }}">Inbox{% if unread %} <span class="badge alert">{{ unread }}</span>{% endif %}</a>
+      <a href="/messages?box=sent" class="{{ 'on' if box == 'sent' else '' }}">Sent</a>
+    </div>
+    <table class="grid">
+      <tr><th style="width:130px">{{ 'From' if box == 'inbox' else 'To' }}</th><th>Subject</th><th style="width:120px">When</th></tr>
+      {% for m in rows %}
+      <tr style="{{ 'font-weight:bold' if box == 'inbox' and not m.read_at else '' }}">
+        <td><a href="/profile/{{ m.sender_name if box == 'inbox' else m.recipient_name }}">{{ m.sender_name if box == 'inbox' else m.recipient_name }}</a></td>
+        <td><a href="/messages/{{ m.id }}">{{ m.subject }}</a></td>
+        <td class="muted">{{ ago(m.created_at) }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% if not rows %}<p class="muted">This folder is empty.</p>{% endif %}
+  </div>
+</div>
+{% include "partials/foot.html" %}

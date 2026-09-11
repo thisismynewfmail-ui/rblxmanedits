@@ -1,0 +1,16 @@
+{% include "partials/head.html" %}
+<div class="panel" style="max-width:640px">
+  <div class="panel-head">Compose message</div>
+  <div class="panel-body">
+    {% if error %}<div class="notice bad">{{ error }}</div>{% endif %}
+    <form method="post" action="/messages/compose">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="field"><label>To</label><input type="text" name="to" value="{{ to }}" maxlength="20"></div>
+      <div class="field"><label>Subject</label><input type="text" name="subject" value="{{ subject }}" maxlength="80"></div>
+      <div class="field"><label>Message</label><textarea name="body" rows="8" maxlength="2000">{{ body }}</textarea></div>
+      <button class="btn primary">Send</button>
+      <a class="btn" href="/messages">Cancel</a>
+    </form>
+  </div>
+</div>
+{% include "partials/foot.html" %}

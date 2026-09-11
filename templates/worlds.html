@@ -1,0 +1,45 @@
+{% include "partials/head.html" %}
+<div class="panel">
+  <div class="panel-head">
+    <span>World Browser</span>
+    <span class="head-links"><b id="global-players">{{ total_players }}</b> players in game &bull;
+      {{ fmt_num(total_visits) }} total visits</span>
+  </div>
+  <div class="panel-body">
+    <div class="worldgrid">
+      {% for row in rows %}{% include "partials/world_card.html" %}{% endfor %}
+    </div>
+  </div>
+  <div class="panel-foot">Player counts refresh automatically. Each world runs in its own process and
+    spins up a new instance whenever the current ones fill up.</div>
+</div>
+
+<div class="row">
+  {% for row in rows %}
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head {{ 'red' if row.world.id == 'fortress_team_2' else ('gold' if row.world.id == 'burger_tycoon' else 'green') }}">
+        {{ row.world.name }} &mdash; live instances
+      </div>
+      <div class="panel-body flush">
+        <table class="grid" data-instances="{{ row.world.id }}">
+          <tr><th>Instance</th><th>Players</th><th>Phase</th><th></th></tr>
+          {% for inst in row.status.instance_list %}
+          <tr>
+            <td>#{{ inst.id }}</td>
+            <td>{{ inst.count }}/{{ inst.max }}</td>
+            <td>{{ inst.phase }}</td>
+            <td class="right"><a class="btn small go" href="/{{ row.world.id }}?instance={{ inst.id }}">Join</a></td>
+          </tr>
+          {% endfor %}
+          {% if not row.status.instance_list %}
+          <tr><td colspan="4" class="muted">No instance running yet &mdash; pressing Load starts one.</td></tr>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% set page_script = "/static/js/ui/worlds.js" %}
+{% include "partials/foot.html" %}

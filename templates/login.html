@@ -1,0 +1,36 @@
+{% include "partials/head.html" %}
+<div class="row">
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head">Sign in to {{ SITE_NAME }}</div>
+      <div class="panel-body">
+        {% if error %}<div class="notice bad">{{ error }}</div>{% endif %}
+        <form method="post" action="/login">
+          <input type="hidden" name="next" value="{{ next_url }}">
+          <div class="field"><label for="u">Username</label>
+            <input id="u" type="text" name="username" autocomplete="username" autofocus maxlength="20"></div>
+          <div class="field"><label for="p">Password</label>
+            <input id="p" type="password" name="password" autocomplete="current-password"></div>
+          <button class="btn primary big" type="submit">Sign in</button>
+          <a class="btn big" href="/register">Create an account</a>
+        </form>
+      </div>
+      <div class="panel-foot">New accounts start with <b>2,000 credits</b> and the standard kit: pistol, shotgun and a very good stick.</div>
+    </div>
+  </div>
+  <div class="col-side">
+    <div class="panel">
+      <div class="panel-head gold">Just looking around?</div>
+      <div class="panel-body">
+        <p>These accounts are seeded on first run so there is always something to look at:</p>
+        <table class="grid">
+          <tr><th>Account</th><th>Password</th><th>Notes</th></tr>
+          <tr><td><b>admin_system</b></td><td>passman69</td><td>Admin dashboard</td></tr>
+          <tr><td><b>admin_test</b></td><td>passman69</td><td>Has an Unusual hat</td></tr>
+          <tr><td>builderman_x</td><td>blockhaven</td><td>Demo player</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% include "partials/foot.html" %}

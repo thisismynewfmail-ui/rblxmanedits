@@ -1,0 +1,189 @@
+{% include "partials/head.html" %}
+<div class="row">
+  <div class="col-side">
+    <div class="panel">
+      <div class="panel-head">{{ profile.username }}'s character</div>
+      <div class="panel-body">
+        <div class="avatar-view" style="height:300px" data-avatar="{{ to_json(avatar) }}">
+          <span class="tag3d">3D</span>
+          <span class="hint">drag to rotate</span>
+        </div>
+        <div class="center" style="margin-top:6px">
+          {% if playing %}
+            <span class="pill green"><span class="dot game"></span> Playing {{ playing }}</span>
+          {% elif online %}
+            <span class="pill green"><span class="dot on"></span> Online</span>
+          {% else %}
+            <span class="pill"><span class="dot off"></span> Offline &mdash; {{ ago(profile.last_seen) }}</span>
+          {% endif %}
+        </div>
+        <div style="margin-top:8px" class="stack">
+          <a class="btn block" href="/inventory/{{ profile.username }}">View inventory ({{ inventory_summary.total }})</a>
+          {% if is_self %}
+            <a class="btn block primary" href="/avatar">Edit my avatar</a>
+          {% else %}
+            {% if user %}
+            <a class="btn block" href="/messages/compose?to={{ profile.username }}">Send message</a>
+            <button class="btn block {{ 'danger' if friend_status == 'friends' else 'go' }}"
+                    id="friend-btn" data-username="{{ profile.username }}" data-state="{{ friend_status }}">
+              {% if friend_status == 'friends' %}Remove friend
+              {% elif friend_status == 'pending_out' %}Request sent
+              {% elif friend_status == 'pending_in' %}Accept request
+              {% else %}Add friend{% endif %}
+            </button>
+            <button class="btn block" id="follow-btn" data-username="{{ profile.username }}" data-state="{{ 1 if following else 0 }}">
+              {{ 'Unfollow' if following else 'Follow' }}</button>
+            {% else %}
+            <a class="btn block primary" href="/login">Sign in to interact</a>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head gold">Statistics</div>
+      <div class="panel-body">
+        <dl class="stats">
+          <div><dt>Kills</dt><dd>{{ fmt_num(stats.total.kills) }}</dd></div>
+          <div><dt>Deaths</dt><dd>{{ fmt_num(stats.total.deaths) }}</dd></div>
+          <div><dt>K/D</dt><dd>{{ stats.total.kdr }}</dd></div>
+          <div><dt>Wins</dt><dd>{{ fmt_num(stats.total.wins) }}</dd></div>
+          <div><dt>Rounds</dt><dd>{{ fmt_num(stats.total.rounds) }}</dd></div>
+          <div><dt>Score</dt><dd>{{ fmt_num(stats.total.score) }}</dd></div>
+        </dl>
+        <hr>
+        <dl class="kv">
+          <dt>Joined</dt><dd>{{ fmt_date(profile.created_at) }}</dd>
+          <dt>Place visits</dt><dd>{{ fmt_num(profile.place_visits) }}</dd>
+          <dt>Friends</dt><dd>{{ friend_count }}</dd>
+          <dt>Followers</dt><dd>{{ follow_counts.followers }}</dd>
+          <dt>Following</dt><dd>{{ follow_counts.following }}</dd>
+          {% if profile.location %}<dt>Location</dt><dd>{{ profile.location }}</dd>{% endif %}
+          {% if mutuals and not is_self %}<dt>Mutuals</dt><dd>{{ mutuals }}</dd>{% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="panel">
+      <div class="panel-head">
+        <span>{{ profile.username }}{{ ' [ADMIN]' if profile.is_admin else '' }}</span>
+        <span class="head-links">member since {{ fmt_date(profile.created_at) }}</span>
+      </div>
+      <div class="panel-body">
+        <p style="font-size:12px">{{ profile.blurb if profile.blurb else 'This builder has not written anything yet.' }}</p>
+        {% if is_self %}<a class="btn small" href="/settings">Edit description</a>{% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head green">Recent items</div>
+      <div class="panel-body">
+        {% if inventory_preview %}
+        <div class="itemgrid">
+          {% for it in inventory_preview %}
+          <div class="item tier-{{ it.tier }}">
+            <div class="thumb-wrap">
+              <canvas class="thumb item-thumb" width="216" height="216"
+                      data-item="{{ it.item_id }}" data-effect="{{ it.effect }}"></canvas>
+              <span class="tier-flag {{ it.tier }}">{{ it.tier_label }}</span>
+              {% if it.effect_name %}<span class="effect-flag">{{ it.effect_name }}</span>{% endif %}
+            </div>
+            <div class="meta">
+              <span class="iname" title="{{ it.name }}">{{ it.name }}</span>
+              <span class="islot">{{ it.slot_label }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}<p class="muted">Nothing in the inventory yet.</p>{% endif %}
+      </div>
+      <div class="panel-foot">
+        <a href="/inventory/{{ profile.username }}">See all {{ inventory_summary.total }} items</a>
+        {% if inventory_summary.unusual %} &mdash; including <b style="color:#5d1f9c">{{ inventory_summary.unusual }} Unusual</b>{% endif %}
+      </div>
+    </div>
+
+    {% if posts_list %}
+    <div class="panel">
+      <div class="panel-head">Posts</div>
+      <div class="panel-body">
+        {% for p in posts_list %}{% set post = p %}{% include "partials/post.html" %}{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+      <div class="panel-head">Profile comments ({{ wall_count }})</div>
+      <div class="panel-body">
+        {% if user %}
+        <form class="commentbox" id="wall-form" data-username="{{ profile.username }}" onsubmit="return false">
+          <input type="text" id="wall-body" maxlength="300" placeholder="Leave a comment on {{ profile.username }}'s profile">
+          <button class="btn primary">Post</button>
+        </form>
+        <hr>
+        {% else %}
+        <p class="muted"><a href="/login">Sign in</a> to leave a comment.</p>
+        {% endif %}
+        <div id="wall-list">
+          {% for c in wall %}
+          <div class="post" data-wall="{{ c.id }}">
+            <div class="spread">
+              <div><a class="who" href="/profile/{{ c.username }}">{{ c.username }}</a>
+                   <span class="when">{{ ago(c.created_at) }}</span></div>
+              {% if user and (user.id == c.author_id or user.id == profile.id or is_admin) %}
+              <a class="tiny muted" data-wall-delete="{{ c.id }}">delete</a>
+              {% endif %}
+            </div>
+            <div class="body">{{ c.body }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-narrow">
+    <div class="panel">
+      <div class="panel-head">Friends ({{ friend_count }})</div>
+      <div class="panel-body">
+        <div class="userlist">
+          {% for f in friends_list %}
+          <a class="usercard" style="width:74px" href="/profile/{{ f.username }}">
+            <canvas class="thumb avatar-thumb" style="width:64px;height:64px" width="128" height="128" data-user="{{ f.username }}"></canvas>
+            <span class="uname">{{ f.username }}</span>
+          </a>
+          {% endfor %}
+        </div>
+        {% if not friends_list %}<p class="muted tiny">No friends yet.</p>{% endif %}
+      </div>
+    </div>
+
+    {% if favourites %}
+    <div class="panel">
+      <div class="panel-head gold">Favourite worlds</div>
+      <div class="panel-body">
+        {% for w in favourites %}
+        <div style="padding:4px 0"><a href="/worlds/{{ w.id }}">{{ w.name }}</a>
+          <div class="tiny muted">{{ w.genre }}</div></div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+      <div class="panel-head">Per-world record</div>
+      <div class="panel-body">
+        <table class="grid">
+          <tr><th>World</th><th class="right">K</th><th class="right">D</th></tr>
+          {% for wid, row in stats.worlds.items() %}
+          <tr><td class="tiny">{{ wid }}</td><td class="right">{{ row.kills }}</td><td class="right">{{ row.deaths }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% include "partials/foot.html" %}
